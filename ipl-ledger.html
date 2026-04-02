@@ -299,7 +299,7 @@ function saveCfg(c){ localStorage.setItem('ipl_cfg',JSON.stringify(c)); }
 
 // ── STATE ──────────────────────────────────────────────────────
 let state={
-  rows:[], pins:{}, mgrPct:1,
+  rows:[], newRows:null, pins:{}, mgrPct:1,
   currentUser:null,
   accessToken:null,   // GIS token
   tokenExpiry:0
@@ -491,7 +491,8 @@ function mgr_parse(){
   state.mgrPct=parseFloat(document.getElementById('mgr-pct').value)||1;
   const result=parseMessage(raw);
   if(!result.ok){err.textContent=result.error;return;}
-  state.rows=result.rows;
+  state.newRows=result.rows;
+  state.rows=[...state.rows,...result.rows];
   rebuildPinGrid();
   renderManager();
   saveToSheet();
@@ -746,6 +747,18 @@ function buildSheetRow(row){
   return [fixture,ratioStr,...betCols,mgrTotal>0?parseFloat(mgrTotal.toFixed(2)):'',...netCols];
 }
 
+async function getLastRow(){
+  // Find how many rows are already in Sheet1
+  const cfg=getCfg();
+  const r=await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/Sheet1!A:A`,
+    {headers:authHeaders()}
+  );
+  const j=await r.json();
+  if(j.error) throw new Error(j.error.message);
+  return (j.values||[]).length; // includes header row
+}
+
 async function saveToSheet(){
   if(!state.accessToken||Date.now()>=state.tokenExpiry){
     syncStatus('✗ Connect Google Account first','err');
@@ -753,11 +766,17 @@ async function saveToSheet(){
   }
   syncStatus('Saving…','loading');
   try{
+    // Save app state to APP_DATA
     const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct});
     await sheetsWrite('APP_DATA!A1',[[json]]);
-    if(state.rows.length){
-      const sheetRows=state.rows.map(buildSheetRow);
-      await sheetsWrite(`Sheet1!A2:AI${1+state.rows.length}`,sheetRows);
+
+    // Append only the NEW rows (ones not yet written)
+    if(state.newRows && state.newRows.length){
+      const lastRow=await getLastRow();
+      const startRow=lastRow+1; // next empty row after existing data
+      const sheetRows=state.newRows.map(buildSheetRow);
+      await sheetsWrite(`Sheet1!A${startRow}:AI${startRow+sheetRows.length-1}`,sheetRows);
+      state.newRows=null; // clear after writing
     }
     syncStatus('✓ Synced to Sheet','ok');
     setTimeout(()=>syncStatus(''),3000);
