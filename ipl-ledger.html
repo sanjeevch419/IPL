@@ -536,14 +536,17 @@ function parseMessage(raw){
 // ratio underdog LOW:HIGH
 // FAVOURITE  → win:+stake        lose:-(stake×high/low)
 // UNDERDOG   → win:+(stake×high/low)  lose:-stake
-function calcBet(ratio,bet,winner){
+const MGR_CUT_EXEMPT = ['Sanju','Venkata'];
+
+function calcBet(ratio,bet,winner,playerName=''){
   if(!winner||!bet) return {gross:null,mgr:null,net:null};
   const isFav=bet.team!==ratio.underdog;
   const won=bet.team===winner;
   let gross;
   if(isFav) gross=won?bet.amount:-(bet.amount*ratio.high/ratio.low);
   else       gross=won?(bet.amount*ratio.high/ratio.low):-bet.amount;
-  const mgr=won ? gross*(state.mgrPct/100) : 0;
+  const exempt=MGR_CUT_EXEMPT.includes(playerName);
+  const mgr=(won&&!exempt) ? gross*(state.mgrPct/100) : 0;
   return {gross,mgr,net:gross-mgr,won};
 }
 
@@ -623,7 +626,7 @@ function renderManager(){
     let hasBets=false;
     for(const p of PLAYERS){
       const bet=ratio.bets[p]; if(!bet) continue; hasBets=true;
-      const c=calcBet(ratio,bet,winner);
+      const c=calcBet(ratio,bet,winner,p);
       if(c.mgr!==null){totalMgr+=c.mgr;roundMgr+=c.mgr;}
       html+=`<tr>
         <td><span class="pill">${p}</span></td>
@@ -663,7 +666,7 @@ function renderPlayer(name){
   let html=''; let totalNet=0; let hasResult=false;
   for(const row of myRows){
     const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
-    const c=calcBet(ratio,bet,winner);
+    const c=calcBet(ratio,bet,winner,name);
     if(c.net!==null){totalNet+=c.net;hasResult=true;}
     html+=`<div class="card match-block">
       <div class="match-head">
@@ -750,7 +753,7 @@ function buildSheetRow(row){
   const betCols=PLAYERS.map(p=>{const b=ratio.bets[p];return b?`${b.team} ${b.amount}`:"";});
   const netCols=PLAYERS.map(p=>{
     const b=ratio.bets[p]; if(!b||!winner) return "";
-    const c=calcBet(ratio,b,winner);
+    const c=calcBet(ratio,b,winner,p);
     if(c.mgr!==null) mgrTotal+=c.mgr;
     return c.net!==null?parseFloat(c.net.toFixed(2)):"";
   });
