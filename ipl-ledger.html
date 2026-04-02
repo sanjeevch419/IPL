@@ -137,8 +137,9 @@ tr:hover td{background:var(--accent-dim2);}
         <div class="hint">From Sheet URL → /spreadsheets/d/<strong>THIS_PART</strong>/edit</div>
       </div>
       <div class="field">
-        <label>API Key</label>
-        <input type="text" id="setup-api-key" placeholder="AIzaSyD..."/>
+        <label>Apps Script URL</label>
+        <input type="text" id="setup-script-url" placeholder="https://script.google.com/macros/s/.../exec"/>
+        <div class="hint">Deploy Code.gs as a Web App → copy the /exec URL here</div>
       </div>
       <div class="field">
         <label>OAuth Client ID</label>
@@ -326,26 +327,26 @@ Uday MI 150`;
 // ── SETUP ──────────────────────────────────────────────────────
 function showSetup(){
   const cfg=getCfg();
-  if(cfg.sheetId)  document.getElementById('setup-sheet-id').value=cfg.sheetId;
-  if(cfg.apiKey)   document.getElementById('setup-api-key').value=cfg.apiKey;
-  if(cfg.clientId) document.getElementById('setup-client-id').value=cfg.clientId;
+  if(cfg.sheetId)    document.getElementById('setup-sheet-id').value=cfg.sheetId;
+  if(cfg.scriptUrl)  document.getElementById('setup-script-url').value=cfg.scriptUrl;
+  if(cfg.clientId)   document.getElementById('setup-client-id').value=cfg.clientId;
   show('screen-setup');
 }
 
 function doSetup(){
-  const sheetId  = document.getElementById('setup-sheet-id').value.trim();
-  const apiKey   = document.getElementById('setup-api-key').value.trim();
-  const clientId = document.getElementById('setup-client-id').value.trim();
-  const pin      = document.getElementById('setup-mgr-pin').value.trim();
-  const pin2     = document.getElementById('setup-mgr-pin2').value.trim();
-  const err      = document.getElementById('setup-err');
+  const sheetId   = document.getElementById('setup-sheet-id').value.trim();
+  const scriptUrl = document.getElementById('setup-script-url').value.trim();
+  const clientId  = document.getElementById('setup-client-id').value.trim();
+  const pin       = document.getElementById('setup-mgr-pin').value.trim();
+  const pin2      = document.getElementById('setup-mgr-pin2').value.trim();
+  const err       = document.getElementById('setup-err');
   err.textContent='';
-  if(!sheetId) { err.textContent='Enter your Sheet ID.'; return; }
-  if(!apiKey)  { err.textContent='Enter your API Key.';  return; }
-  if(!clientId){ err.textContent='Enter your Client ID.';return; }
-  if(!pin)     { err.textContent='Choose a manager PIN.';return; }
-  if(pin!==pin2){ err.textContent='PINs do not match.';  return; }
-  saveCfg({...getCfg(), sheetId, apiKey, clientId, mgrPin:pin});
+  if(!sheetId)   { err.textContent='Enter your Sheet ID.';        return; }
+  if(!scriptUrl) { err.textContent='Enter your Apps Script URL.'; return; }
+  if(!clientId)  { err.textContent='Enter your Client ID.';       return; }
+  if(!pin)       { err.textContent='Choose a manager PIN.';       return; }
+  if(pin!==pin2) { err.textContent='PINs do not match.';          return; }
+  saveCfg({...getCfg(), sheetId, scriptUrl, clientId, mgrPin:pin});
   show('screen-login');
 }
 
@@ -371,21 +372,14 @@ function doLogin(){
 
   const matched=matchPlayer(rawName);
   if(matched){
-    if(state.pins[matched] && state.pins[matched]===pin){
-      loginAsPlayer(matched);
-      return;
-    }
-    // pins not in memory yet — load from sheet then check
     err.textContent='Checking…';
-    loadPinsOnly().then(()=>{
-      if(state.pins[matched] && state.pins[matched]===pin){
-        err.textContent='';
-        loginAsPlayer(matched);
-      } else {
-        err.textContent='Incorrect name or PIN. Contact the manager.';
-      }
-    }).catch(()=>{
-      err.textContent='Incorrect name or PIN. Contact the manager.';
+    fetchPlayerData(matched,pin).then(data=>{
+      state.rows=data.rows||[];
+      state.mgrPct=data.mgrPct||1;
+      err.textContent='';
+      loginAsPlayer(matched);
+    }).catch(e=>{
+      err.textContent=e.message||'Incorrect name or PIN. Contact the manager.';
     });
     return;
   }
@@ -710,15 +704,15 @@ async function sheetsRead(range){
   return j.values?.[0]?.[0]||null;
 }
 
-// Public read using API key only — for players (no auth needed)
-async function sheetsReadPublic(range){
+// Fetch player data via Apps Script (sheet stays private)
+async function fetchPlayerData(name,pin){
   const cfg=getCfg();
-  const r=await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}?key=${cfg.apiKey}`
-  );
+  if(!cfg.scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
+  const url=`${cfg.scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
+  const r=await fetch(url);
   const j=await r.json();
-  if(j.error) throw new Error(j.error.message);
-  return j.values?.[0]?.[0]||null;
+  if(!j.ok) throw new Error(j.error||'Login failed');
+  return j; // {ok, rows, mgrPct}
 }
 
 async function sheetsWrite(range,values){
@@ -802,20 +796,10 @@ async function loadFromSheet(){
   }catch(e){ syncStatus('✗ '+e.message,'err'); }
 }
 
-async function loadPinsOnly(){
-  const val=await sheetsReadPublic('APP_DATA!A1');
-  if(val){
-    const d=JSON.parse(val);
-    state.pins=d.pins||{};
-    state.rows=d.rows||[];
-    state.mgrPct=d.mgrPct||1;
-  }
-}
-
 // ── INIT ───────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
   const cfg=getCfg();
-  if(cfg.sheetId && cfg.apiKey && cfg.clientId && cfg.mgrPin){
+  if(cfg.sheetId && cfg.scriptUrl && cfg.clientId && cfg.mgrPin){
     show('screen-login');
     // Init GIS after its script loads
     const tryInit=setInterval(()=>{
