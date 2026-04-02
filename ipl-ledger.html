@@ -545,7 +545,7 @@ function calcBet(ratio,bet,winner){
   let gross;
   if(isFav) gross=won?bet.amount:-(bet.amount*ratio.high/ratio.low);
   else       gross=won?(bet.amount*ratio.high/ratio.low):-bet.amount;
-  const mgr=Math.abs(gross)*(state.mgrPct/100);
+  const mgr=won ? gross*(state.mgrPct/100) : 0;
   return {gross,mgr,net:gross-mgr,won};
 }
 
