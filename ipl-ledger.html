@@ -590,12 +590,16 @@ function fmtMgr(v){
 }
 
 // ── DELETE ROW ─────────────────────────────────────────────────
-function deleteRow(i){
+async function deleteRow(i){
   const row=state.rows[i];
   if(!confirm(`Delete "${row.match} Round ${row.ratio.roundNum} (${row.date})"?`)) return;
+  if(!state.accessToken||Date.now()>=state.tokenExpiry){
+    alert('Google session expired. Click "Sign in with Google" to reconnect, then try again.');
+    return;
+  }
   state.rows.splice(i,1);
   renderManager();
-  saveToSheet();
+  await saveToSheet();
 }
 
 // ── RENDER MANAGER ─────────────────────────────────────────────
