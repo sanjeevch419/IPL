@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IPL Betting Ledger</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+:root {
+  --bg:#0f0f0f; --surface:#1a1a1a; --surface2:#222; --border:#2a2a2a; --border2:#333;
+  --text:#f0f0f0; --text2:#888; --text3:#555;
+  --accent:#c8f135; --accent-dim:rgba(200,241,53,0.12); --accent-dim2:rgba(200,241,53,0.05);
+  --red:#ff5c5c; --red-dim:rgba(255,92,92,0.12);
+  --green:#4dca7a; --green-dim:rgba(77,202,122,0.12);
+  --amber:#f5a623; --amber-dim:rgba(245,166,35,0.12);
+  --radius:10px; --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;}
+.app{min-height:100vh;display:flex;flex-direction:column;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;}
+.logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.06em;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.user-chip{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border2);border-radius:999px;padding:5px 12px 5px 8px;font-size:12px;}
+.user-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+.user-dot.mgr{background:var(--amber);}
+.screen{display:none;flex:1;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* CENTERED CARD SCREENS */
+.center-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;}
+.center-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:2rem;}
+.eyebrow{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
+.card-title-lg{font-size:22px;font-weight:600;margin-bottom:6px;}
+.card-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-family:var(--mono);}
+.field input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:border-color .15s;}
+.field input:focus{border-color:var(--accent);}
+.field .hint{font-size:11px;color:var(--text3);margin-top:5px;font-family:var(--mono);}
+.btn{padding:10px 20px;border-radius:var(--radius);font-size:13px;font-family:var(--font);font-weight:500;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text);transition:all .15s;}
+.btn:hover{background:var(--surface2);}
+.btn.accent{background:var(--accent);color:#0f0f0f;border-color:var(--accent);}
+.btn.accent:hover{opacity:.88;}
+.btn.sm{padding:7px 14px;font-size:12px;}
+.btn.ghost{border-color:transparent;color:var(--text3);}
+.btn.ghost:hover{color:var(--text2);background:transparent;}
+.err-msg{font-size:12px;color:var(--red);margin-top:10px;min-height:16px;}
+.divider{display:flex;align-items:center;gap:12px;margin:1.25rem 0;}
+.divider hr{flex:1;border:none;border-top:1px solid var(--border2);}
+.divider span{font-size:11px;color:var(--text3);font-family:var(--mono);}
+
+/* MAIN */
+.main{flex:1;padding:24px;max-width:1000px;width:100%;margin:0 auto;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.25rem;overflow:hidden;}
+.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
+.card-label{font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;}
+.card-title{font-size:14px;font-weight:500;}
+.card-body{padding:18px;}
+.msg-area{width:100%;min-height:180px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:13px;padding:12px;resize:vertical;outline:none;line-height:1.8;}
+.msg-area:focus{border-color:var(--accent);}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+.row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.muted{font-size:12px;color:var(--text2);}
+.pct-in{width:60px;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none;}
+.pct-in:focus{border-color:var(--accent);}
+
+/* PINS */
+.pin-grid{display:flex;flex-direction:column;gap:10px;}
+.pin-row-item{display:flex;align-items:center;gap:12px;}
+.pin-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pin-in{width:130px;padding:8px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;}
+.pin-in:focus{border-color:var(--accent);}
+.pin-tag{font-size:11px;font-family:var(--mono);}
+.pin-tag.set{color:var(--green);}
+.pin-tag.unset{color:var(--text3);}
+
+/* SYNC */
+.sync{font-size:11px;font-family:var(--mono);}
+.sync.ok{color:var(--green);}
+.sync.err{color:var(--red);}
+.sync.loading{color:var(--text3);}
+
+/* MATCH */
+.match-block{margin-bottom:1.25rem;}
+.match-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.match-name{font-weight:500;font-size:14px;}
+.ratio-tag{font-family:var(--mono);font-size:11px;color:var(--amber);background:var(--amber-dim);padding:3px 9px;border-radius:999px;}
+.round-tag{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:999px;border:1px solid var(--border2);}
+.winner-tag{font-family:var(--mono);font-size:11px;color:var(--green);background:var(--green-dim);padding:3px 9px;border-radius:999px;}
+.pending-tag{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:999px;border:1px solid var(--border2);}
+
+table{width:100%;border-collapse:collapse;}
+th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text3);border-bottom:1px solid var(--border);font-weight:400;}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--accent-dim2);}
+.my-row td{background:var(--accent-dim2);}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-family:var(--mono);background:var(--surface2);color:var(--text2);border:1px solid var(--border2);}
+.val-win{color:var(--green);font-family:var(--mono);font-weight:500;}
+.val-loss{color:var(--red);font-family:var(--mono);font-weight:500;}
+.val-mgr{color:var(--amber);font-family:var(--mono);}
+.val-n{color:var(--text3);font-family:var(--mono);}
+
+.summary-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:1rem;}
+.s-tile{flex:1;min-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.s-label{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;}
+.s-val{font-size:22px;font-weight:600;font-family:var(--mono);}
+.s-val.win{color:var(--green);}
+.s-val.loss{color:var(--red);}
+.s-val.amber{color:var(--amber);}
+.locked-notice{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:12px;color:var(--text3);font-family:var(--mono);}
+.sample-box{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:14px;font-family:var(--mono);font-size:12px;line-height:2;color:var(--text2);margin-top:10px;white-space:pre-wrap;}
+.kw{color:var(--accent);}
+.vl{color:var(--text);}
+.no-data{padding:24px;text-align:center;color:var(--text3);font-size:13px;font-family:var(--mono);}
+
+/* SETUP STEPS */
+.setup-steps{list-style:none;counter-reset:step;margin-top:4px;}
+.setup-steps li{counter-increment:step;display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.6;}
+.setup-steps li:last-child{border-bottom:none;}
+.setup-steps li::before{content:counter(step);min-width:20px;height:20px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:11px;font-family:var(--mono);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+
+@media(max-width:600px){.main{padding:14px;}.topbar{padding:12px 14px;}th,td{padding:7px 8px;font-size:12px;}}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <div class="logo">IPL_LEDGER</div>
+  <div class="topbar-right" id="topbar-right" style="display:none;">
+    <div class="user-chip">
+      <div class="user-dot" id="user-dot"></div>
+      <span id="user-chip-name"></span>
+    </div>
+    <button class="btn sm" onclick="doLogout()">Sign out</button>
+  </div>
+</div>
+
+<!-- SETUP SCREEN (first time only) -->
+<div class="screen active" id="screen-setup">
+  <div class="center-wrap">
+    <div class="center-card">
+      <div class="eyebrow">One-time setup</div>
+      <div class="card-title-lg">Connect your account</div>
+      <div class="card-sub">These are saved privately on this device only. Never visible in source code.</div>
+
+      <div class="field">
+        <label>Google Sheet ID</label>
+        <input type="text" id="setup-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..."/>
+        <div class="hint">From your Sheet URL: /spreadsheets/d/<strong>THIS_PART</strong>/edit</div>
+      </div>
+      <div class="field">
+        <label>API Key</label>
+        <input type="text" id="setup-api-key" placeholder="AIzaSyD..."/>
+        <div class="hint">From Google Cloud → Credentials → API Keys</div>
+      </div>
+      <div class="field">
+        <label>OAuth Client ID</label>
+        <input type="text" id="setup-client-id" placeholder="1234567890-abc.apps.googleusercontent.com"/>
+        <div class="hint">From Google Cloud → Credentials → OAuth 2.0 Client IDs</div>
+      </div>
+
+      <div class="divider"><hr/><span>manager account</span><hr/></div>
+
+      <div class="field">
+        <label>Manager PIN</label>
+        <input type="password" id="setup-mgr-pin" placeholder="Choose a strong PIN" maxlength="16"/>
+        <div class="hint">Only you know this. Keep it secret.</div>
+      </div>
+      <div class="field">
+        <label>Confirm Manager PIN</label>
+        <input type="password" id="setup-mgr-pin2" placeholder="Repeat PIN" maxlength="16"/>
+      </div>
+
+      <div class="err-msg" id="setup-err"></div>
+      <button class="btn accent" style="width:100%;margin-top:4px;" onclick="doSetup()">Save &amp; Continue →</button>
+
+      <div style="margin-top:1.5rem;">
+        <div class="muted" style="margin-bottom:8px;">Don't have these yet?</div>
+        <ul class="setup-steps">
+          <li>Go to sheets.google.com → create a sheet named <strong>IPL Ledger</strong> → add a 2nd tab named <strong>APP_DATA</strong> → copy the Sheet ID from the URL</li>
+          <li>Go to console.cloud.google.com → enable Google Sheets API → create an API Key → create an OAuth 2.0 Client ID (Web application type)</li>
+          <li>In the OAuth Client ID, add your app URL to Authorised JavaScript origins</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="screen" id="screen-login">
+  <div class="center-wrap">
+    <div class="center-card">
+      <div class="eyebrow">IPL Betting Ledger</div>
+      <div class="card-title-lg">Sign in</div>
+      <div class="card-sub">Enter your name and PIN to view your settlements.</div>
+      <div class="field">
+        <label>Name</label>
+        <input type="text" id="login-name" placeholder="e.g. Sanju, Venkata, Manager" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label>PIN</label>
+        <input type="password" id="login-pin" placeholder="Your PIN" maxlength="16"
+          onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="err-msg" id="login-err"></div>
+      <button class="btn accent" style="width:100%;margin-top:4px;" onclick="doLogin()">Sign in →</button>
+      <div style="margin-top:12px;text-align:right;">
+        <button class="btn ghost" style="font-size:11px;" onclick="show('screen-setup')">⚙ Reconfigure</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGER SCREEN -->
+<div class="screen" id="screen-manager">
+  <div class="main">
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-label">Step 1</div>
+          <div class="card-title">Paste WhatsApp message</div>
+        </div>
+        <div class="row2">
+          <span class="muted">Manager cut</span>
+          <input type="number" class="pct-in" id="mgr-pct" value="1" min="0" max="20" step="0.1"/>
+          <span class="muted">%</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <textarea class="msg-area" id="mgr-input"></textarea>
+        <div class="row">
+          <button class="btn accent" onclick="mgr_parse()">Parse &amp; Save to Sheet</button>
+          <button class="btn" onclick="mgr_load_example()">Load example</button>
+          <span class="sync" id="sync-status"></span>
+        </div>
+        <div class="err-msg" id="mgr-err"></div>
+        <div style="margin-top:16px;">
+          <div class="muted" style="margin-bottom:6px;">Message format:</div>
+          <div class="sample-box"><span class="kw">Date:</span> <span class="vl">01-Apr-2025</span>
+<span class="kw">Match:</span> <span class="vl">MI vs CSK</span>
+<span class="kw">Winner:</span> <span class="vl">CSK</span>         ← omit if match not finished yet
+
+<span class="kw">Ratio:</span> <span class="vl">CSK 10:12</span>       ← CSK=underdog, MI=favourite
+<span class="vl">Sanju MI 100</span>            ← Player Team Amount
+<span class="vl">Venkata CSK 200</span>
+
+<span class="kw">Ratio:</span> <span class="vl">MI 10:15</span>        ← second innings (optional)
+<span class="vl">Sanju MI 200</span>
+<span class="vl">Venkata CSK 300</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-label">Step 2</div>
+          <div class="card-title">Player PINs</div>
+        </div>
+        <div class="row2">
+          <button class="btn sm" onclick="savePins()">Save PINs</button>
+          <span class="sync ok" id="pin-saved-msg"></span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="muted" style="margin-bottom:14px;">Set a PIN for each player and share it with them privately on WhatsApp.</p>
+        <div class="pin-grid" id="pin-grid"></div>
+      </div>
+    </div>
+
+    <div id="mgr-output"></div>
+  </div>
+</div>
+
+<!-- PLAYER SCREEN -->
+<div class="screen" id="screen-player">
+  <div class="main">
+    <div id="player-output"></div>
+  </div>
+</div>
+
+</div><!-- end .app -->
+
+<script>
+// ── PLAYERS (your exact sheet column order) ────────────────────
+const PLAYERS = [
+  'Sanju','Venkata','Karthik','Teja','Uday','Mohan','Rajesh',
+  'Shiva Korwar','Pavan','Baddam','Avinash','Varun','Sandeep',
+  'Ujwal','RaviTeja','Sivaji'
+];
+
+function normName(n){ return n.toLowerCase().replace(/[\s\-_]/g,''); }
+const PLAYER_NORM = PLAYERS.map(normName);
+function matchPlayer(raw){
+  const n=normName(raw);
+  const i=PLAYER_NORM.findIndex(p=>p===n);
+  return i>=0?PLAYERS[i]:null;
+}
+
+// ── CONFIG (stored in localStorage, never in code) ─────────────
+function getCfg(){
+  try{ return JSON.parse(localStorage.getItem('ipl_cfg')||'{}'); }
+  catch(e){ return {}; }
+}
+function saveCfg(cfg){ localStorage.setItem('ipl_cfg',JSON.stringify(cfg)); }
+
+// ── STATE ──────────────────────────────────────────────────────
+let state = { rows:[], pins:{}, mgrPct:1, currentUser:null };
+
+const EXAMPLE=`Date: 01-Apr-2025
+Match: MI vs CSK
+Winner: CSK
+
+Ratio: CSK 10:12
+Sanju MI 100
+Venkata CSK 200
+Karthik MI 300
+Teja CSK 200
+Uday MI 150
+
+Ratio: MI 10:15
+Sanju MI 200
+Venkata CSK 300
+Karthik CSK 300
+Teja CSK 200
+Uday MI 150`;
+
+// ── SETUP ──────────────────────────────────────────────────────
+function doSetup(){
+  const sheetId  = document.getElementById('setup-sheet-id').value.trim();
+  const apiKey   = document.getElementById('setup-api-key').value.trim();
+  const clientId = document.getElementById('setup-client-id').value.trim();
+  const pin      = document.getElementById('setup-mgr-pin').value.trim();
+  const pin2     = document.getElementById('setup-mgr-pin2').value.trim();
+  const err      = document.getElementById('setup-err');
+  err.textContent='';
+
+  if(!sheetId){ err.textContent='Enter your Sheet ID.'; return; }
+  if(!apiKey){  err.textContent='Enter your API Key.';  return; }
+  if(!clientId){err.textContent='Enter your Client ID.';return; }
+  if(!pin){     err.textContent='Choose a manager PIN.';return; }
+  if(pin!==pin2){err.textContent='PINs do not match.'; return; }
+
+  saveCfg({sheetId,apiKey,clientId,mgrPin:pin});
+  initGapi(clientId,apiKey);
+  show('screen-login');
+}
+
+// ── LOGIN ──────────────────────────────────────────────────────
+function doLogin(){
+  const cfg=getCfg();
+  const rawName=document.getElementById('login-name').value.trim();
+  const pin=document.getElementById('login-pin').value.trim();
+  const err=document.getElementById('login-err');
+  err.textContent='';
+  if(!rawName){err.textContent='Enter your name.';return;}
+  if(!pin){err.textContent='Enter your PIN.';return;}
+
+  if(normName(rawName)==='manager' && pin===cfg.mgrPin){
+    state.currentUser='MANAGER';
+    showTopbar('Manager',true);
+    show('screen-manager');
+    loadFromSheet();
+    return;
+  }
+
+  const matched=matchPlayer(rawName);
+  if(matched && state.pins[matched] && state.pins[matched]===pin){
+    state.currentUser=matched;
+    showTopbar(matched,false);
+    show('screen-player');
+    loadFromSheetPlayer(matched);
+    return;
+  }
+  err.textContent='Incorrect name or PIN. Contact the manager.';
+}
+
+function doLogout(){
+  state.currentUser=null;
+  document.getElementById('login-name').value='';
+  document.getElementById('login-pin').value='';
+  document.getElementById('login-err').textContent='';
+  document.getElementById('topbar-right').style.display='none';
+  show('screen-login');
+}
+function showTopbar(name,isMgr){
+  document.getElementById('topbar-right').style.display='flex';
+  document.getElementById('user-chip-name').textContent=name;
+  document.getElementById('user-dot').className='user-dot'+(isMgr?' mgr':'');
+}
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── PARSE ──────────────────────────────────────────────────────
+function mgr_load_example(){ document.getElementById('mgr-input').value=EXAMPLE; }
+
+function mgr_parse(){
+  const raw=document.getElementById('mgr-input').value.trim();
+  const err=document.getElementById('mgr-err');
+  err.textContent='';
+  state.mgrPct=parseFloat(document.getElementById('mgr-pct').value)||1;
+  const result=parseMessage(raw);
+  if(!result.ok){err.textContent=result.error;return;}
+  state.rows=result.rows;
+  rebuildPinGrid();
+  renderManager();
+  saveToSheet();
+}
+
+function parseMessage(raw){
+  const lines=raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  let date='',match='',winner='',teams=[];
+  let currentRatio=null,roundNum=0;
+  const rows=[];
+  for(const line of lines){
+    if(/^date:/i.test(line)){date=line.replace(/^date:\s*/i,'').trim();continue;}
+    if(/^match:/i.test(line)){
+      match=line.replace(/^match:\s*/i,'').trim();
+      teams=match.split(/\s+vs\s+/i).map(t=>t.trim().toUpperCase());
+      continue;
+    }
+    if(/^winner:/i.test(line)){winner=line.replace(/^winner:\s*/i,'').trim().toUpperCase();continue;}
+    if(/^ratio:/i.test(line)){
+      const rStr=line.replace(/^ratio:\s*/i,'').trim();
+      const rm=rStr.match(/^(.+?)\s+(\d+):(\d+)$/i);
+      if(!rm) return {ok:false,error:'Bad ratio format: '+rStr};
+      roundNum++;
+      currentRatio={underdog:rm[1].trim().toUpperCase(),low:parseInt(rm[2]),high:parseInt(rm[3]),roundNum,bets:{}};
+      rows.push({date,match,teams,winner,ratio:currentRatio});
+      continue;
+    }
+    if(currentRatio){
+      const m=line.match(/^(.+?)\s+([A-Za-z0-9]+)\s+(\d+(?:\.\d+)?)$/);
+      if(m){
+        const p=matchPlayer(m[1].trim());
+        if(p) currentRatio.bets[p]={team:m[2].trim().toUpperCase(),amount:parseFloat(m[3])};
+      }
+    }
+  }
+  if(!date) return {ok:false,error:'Missing Date: line'};
+  if(!match) return {ok:false,error:'Missing Match: line'};
+  if(!rows.length) return {ok:false,error:'No Ratio: blocks found'};
+  return {ok:true,rows};
+}
+
+// ── ODDS CALC ──────────────────────────────────────────────────
+// ratio: underdog LOW:HIGH
+// e.g. CSK 10:12 → CSK underdog, MI favourite
+//
+// Bet FAVOURITE → win: +stake / lose: -(stake × high/low)
+// Bet UNDERDOG  → win: +(stake × high/low) / lose: -stake
+
+function calcBet(ratio,bet,winner){
+  if(!winner||!bet) return {gross:null,mgr:null,net:null,won:null};
+  const isFav = bet.team!==ratio.underdog;
+  const won   = bet.team===winner;
+  let gross;
+  if(isFav){
+    gross = won ? bet.amount : -(bet.amount*ratio.high/ratio.low);
+  } else {
+    gross = won ? (bet.amount*ratio.high/ratio.low) : -bet.amount;
+  }
+  const mgr=Math.abs(gross)*(state.mgrPct/100);
+  return {gross, mgr, net:gross-mgr, won};
+}
+
+// ── PINS ───────────────────────────────────────────────────────
+function rebuildPinGrid(){
+  const grid=document.getElementById('pin-grid');
+  grid.innerHTML=PLAYERS.map(p=>{
+    const isSet=!!state.pins[p];
+    const id='pin-'+p.replace(/\s/g,'_');
+    return `<div class="pin-row-item">
+      <div class="pin-avatar">${p.substring(0,2).toUpperCase()}</div>
+      <span style="font-size:13px;min-width:110px;color:var(--text)">${p}</span>
+      <input type="text" class="pin-in" maxlength="8" placeholder="set PIN"
+        value="${state.pins[p]||''}" id="${id}"/>
+      <span class="pin-tag ${isSet?'set':'unset'}">${isSet?'✓ set':'not set'}</span>
+    </div>`;
+  }).join('');
+}
+
+function savePins(){
+  PLAYERS.forEach(p=>{
+    const el=document.getElementById('pin-'+p.replace(/\s/g,'_'));
+    if(el&&el.value.trim()) state.pins[p]=el.value.trim();
+  });
+  rebuildPinGrid();
+  const msg=document.getElementById('pin-saved-msg');
+  msg.textContent='✓ Saved';
+  setTimeout(()=>msg.textContent='',2500);
+  saveToSheet();
+}
+
+// ── FORMAT ─────────────────────────────────────────────────────
+function fmtPL(v){
+  if(v===null||v===undefined) return '<span class="val-n">—</span>';
+  const n=parseFloat(v);
+  return `<span class="${n>=0?'val-win':'val-loss'}">${n>=0?'+':''}₹${Math.abs(n).toFixed(2)}</span>`;
+}
+function fmtMgr(v){
+  if(v===null||v===undefined) return '<span class="val-n">—</span>';
+  return `<span class="val-mgr">₹${parseFloat(v).toFixed(2)}</span>`;
+}
+
+// ── RENDER MANAGER ─────────────────────────────────────────────
+function renderManager(){
+  const out=document.getElementById('mgr-output');
+  if(!state.rows.length){out.innerHTML='';return;}
+  let html=''; let totalMgr=0;
+  for(const row of state.rows){
+    const ratio=row.ratio, winner=row.winner;
+    const favTeam=row.teams.find(t=>t!==ratio.underdog)||row.teams[0];
+    let roundMgr=0;
+    html+=`<div class="card match-block">
+      <div class="match-head">
+        <span class="match-name">${row.match}</span>
+        <span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span>
+        <span class="round-tag">Round ${ratio.roundNum}</span>
+        <span class="muted" style="font-size:11px;">${row.date}</span>
+        ${winner?`<span class="winner-tag">✓ ${winner} won</span>`:`<span class="pending-tag">Awaiting result</span>`}
+        <span style="margin-left:auto;font-size:11px;color:var(--text3);font-family:var(--mono)">Fav: ${favTeam}</span>
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr>
+          <th>Player</th><th>Backed</th><th>Stake</th>
+          <th>Gross P&amp;L</th><th>Mgr ${state.mgrPct}%</th><th>Net P&amp;L</th>
+        </tr></thead><tbody>`;
+    let hasBets=false;
+    for(const p of PLAYERS){
+      const bet=ratio.bets[p]; if(!bet) continue; hasBets=true;
+      const c=calcBet(ratio,bet,winner);
+      if(c.mgr!==null){totalMgr+=c.mgr;roundMgr+=c.mgr;}
+      html+=`<tr>
+        <td><span class="pill">${p}</span></td>
+        <td style="font-family:var(--mono)">${bet.team}</td>
+        <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
+        <td>${fmtPL(c.gross)}</td><td>${fmtMgr(c.mgr)}</td><td>${fmtPL(c.net)}</td>
+      </tr>`;
+    }
+    if(!hasBets) html+=`<tr><td colspan="6" class="no-data">No bets in this round</td></tr>`;
+    html+=`</tbody></table></div>`;
+    if(winner&&roundMgr>0){
+      html+=`<div style="padding:10px 18px;border-top:1px solid var(--border);font-size:12px;font-family:var(--mono);color:var(--amber);">Round manager share: ₹${roundMgr.toFixed(2)}</div>`;
+    }
+    html+=`</div>`;
+  }
+  if(totalMgr>0){
+    html+=`<div class="summary-row"><div class="s-tile">
+      <div class="s-label">Total manager share</div>
+      <div class="s-val amber">₹${totalMgr.toFixed(2)}</div>
+    </div></div>`;
+  }
+  out.innerHTML=html;
+}
+
+// ── RENDER PLAYER ──────────────────────────────────────────────
+function renderPlayer(name){
+  const out=document.getElementById('player-output');
+  if(!state.rows.length){
+    out.innerHTML=`<div class="card"><div class="no-data">No matches loaded yet.<br>The manager hasn't posted today's bets.</div></div>`;
+    return;
+  }
+  const myRows=state.rows.filter(r=>r.ratio.bets[name]);
+  if(!myRows.length){
+    out.innerHTML=`<div class="card"><div class="no-data">No bets found for ${name} yet.</div></div>`;
+    return;
+  }
+  let html=''; let totalNet=0; let hasResult=false;
+  for(const row of myRows){
+    const ratio=row.ratio, bet=ratio.bets[name], winner=row.winner;
+    const c=calcBet(ratio,bet,winner);
+    if(c.net!==null){totalNet+=c.net;hasResult=true;}
+    html+=`<div class="card match-block">
+      <div class="match-head">
+        <span class="match-name">${row.match}</span>
+        <span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span>
+        <span class="round-tag">Round ${ratio.roundNum}</span>
+        <span class="muted" style="font-size:11px;">${row.date}</span>
+        ${winner?`<span class="winner-tag">✓ ${winner} won</span>`:`<span class="pending-tag">Awaiting result</span>`}
+      </div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr>
+          <th>Backed</th><th>Your stake</th>
+          <th>Gross P&amp;L</th><th>Mgr ${state.mgrPct}%</th><th>Your net</th>
+        </tr></thead><tbody>
+        <tr class="my-row">
+          <td style="font-family:var(--mono)">${bet.team}</td>
+          <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
+          <td>${fmtPL(c.gross)}</td><td>${fmtMgr(c.mgr)}</td><td>${fmtPL(c.net)}</td>
+        </tr>
+        </tbody></table></div>
+      <div class="locked-notice">🔒 Other players' bets are private</div>
+    </div>`;
+  }
+  if(hasResult){
+    html+=`<div class="summary-row"><div class="s-tile">
+      <div class="s-label">Your total net P&amp;L</div>
+      <div class="s-val ${totalNet>=0?'win':'loss'}">${totalNet>=0?'+':''}₹${totalNet.toFixed(2)}</div>
+    </div></div>`;
+  }
+  out.innerHTML=html;
+}
+
+// ── GOOGLE SHEETS ──────────────────────────────────────────────
+function syncStatus(msg,cls=''){
+  const el=document.getElementById('sync-status');
+  if(el){el.textContent=msg;el.className='sync '+cls;}
+}
+
+function buildSheetRow(row){
+  const ratio=row.ratio, winner=row.winner;
+  const fixture=`${row.date} ${row.match}`;
+  const ratioStr=`${ratio.underdog} ${ratio.low}:${ratio.high}`;
+  let mgrTotal=0;
+  const betCols=PLAYERS.map(p=>{ const b=ratio.bets[p]; return b?b.amount:''; });
+  const netCols=PLAYERS.map(p=>{
+    const b=ratio.bets[p]; if(!b||!winner) return '';
+    const c=calcBet(ratio,b,winner);
+    if(c.mgr!==null) mgrTotal+=c.mgr;
+    return c.net!==null?parseFloat(c.net.toFixed(2)):'';
+  });
+  return [fixture,ratioStr,...betCols,mgrTotal>0?parseFloat(mgrTotal.toFixed(2)):'',...netCols];
+}
+
+async function saveToSheet(){
+  const cfg=getCfg(); if(!cfg.sheetId) return;
+  syncStatus('Saving…','loading');
+  try{
+    const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct});
+    await sheetsWrite('APP_DATA!A1',[[json]]);
+    if(state.rows.length){
+      const sheetRows=state.rows.map(buildSheetRow);
+      await sheetsWrite(`Sheet1!A2:AI${1+state.rows.length}`,sheetRows);
+    }
+    syncStatus('✓ Synced to Sheet','ok');
+    setTimeout(()=>syncStatus(''),3000);
+  }catch(e){ syncStatus('✗ '+e.message,'err'); }
+}
+
+async function loadFromSheet(){
+  const cfg=getCfg(); if(!cfg.sheetId) return;
+  syncStatus('Loading…','loading');
+  try{
+    const val=await sheetsRead('APP_DATA!A1');
+    if(val){
+      const d=JSON.parse(val);
+      state.rows=d.rows||[];
+      state.pins=d.pins||{};
+      state.mgrPct=d.mgrPct||1;
+      document.getElementById('mgr-pct').value=state.mgrPct;
+    }
+    rebuildPinGrid(); renderManager();
+    syncStatus('✓ Loaded','ok');
+    setTimeout(()=>syncStatus(''),2000);
+  }catch(e){ syncStatus('✗ '+e.message,'err'); }
+}
+
+async function loadFromSheetPlayer(name){
+  const cfg=getCfg();
+  if(cfg.sheetId){
+    try{
+      const val=await sheetsRead('APP_DATA!A1');
+      if(val){
+        const d=JSON.parse(val);
+        state.rows=d.rows||[];
+        state.pins=d.pins||{};
+        state.mgrPct=d.mgrPct||1;
+      }
+    }catch(e){}
+  }
+  renderPlayer(name);
+}
+
+async function sheetsRead(range){
+  const cfg=getCfg();
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}?key=${cfg.apiKey}`;
+  const r=await fetch(url); const j=await r.json();
+  if(j.error) throw new Error(j.error.message);
+  return j.values?.[0]?.[0]||null;
+}
+
+async function sheetsWrite(range,values){
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId:getCfg().sheetId,
+    range, valueInputOption:'RAW', resource:{values}
+  });
+}
+
+function initGapi(clientId,apiKey){
+  if(document.getElementById('gapi-script')) return;
+  const s=document.createElement('script');
+  s.id='gapi-script';
+  s.src='https://apis.google.com/js/api.js';
+  s.onload=()=>{
+    gapi.load('client:auth2',()=>{
+      gapi.client.init({
+        apiKey,clientId,
+        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+        scope:'https://www.googleapis.com/auth/spreadsheets'
+      }).then(()=>{
+        if(!gapi.auth2.getAuthInstance().isSignedIn.get()){
+          gapi.auth2.getAuthInstance().signIn();
+        }
+      });
+    });
+  };
+  document.head.appendChild(s);
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded',()=>{
+  const cfg=getCfg();
+  if(cfg.sheetId && cfg.apiKey && cfg.clientId && cfg.mgrPin){
+    // Already configured — go to login
+    initGapi(cfg.clientId,cfg.apiKey);
+    show('screen-login');
+  } else {
+    // First time — show setup
+    show('screen-setup');
+  }
+  rebuildPinGrid();
+});
+</script>
+</body>
+</html>
