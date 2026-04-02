@@ -734,17 +734,18 @@ async function sheetsWrite(range,values){
 
 function buildSheetRow(row){
   const ratio=row.ratio,winner=row.winner;
-  const fixture=`${row.date} ${row.match}`;
+  const dateStr=row.date;
+  const fixtureStr=row.match;
   const ratioStr=`${ratio.underdog} ${ratio.low}:${ratio.high}`;
   let mgrTotal=0;
   const betCols=PLAYERS.map(p=>{const b=ratio.bets[p];return b?`${b.team} ${b.amount}`:"";});
   const netCols=PLAYERS.map(p=>{
-    const b=ratio.bets[p]; if(!b||!winner) return '';
+    const b=ratio.bets[p]; if(!b||!winner) return "";
     const c=calcBet(ratio,b,winner);
     if(c.mgr!==null) mgrTotal+=c.mgr;
-    return c.net!==null?parseFloat(c.net.toFixed(2)):'';
+    return c.net!==null?parseFloat(c.net.toFixed(2)):"";
   });
-  return [fixture,ratioStr,...betCols,mgrTotal>0?parseFloat(mgrTotal.toFixed(2)):'',...netCols];
+  return [dateStr,fixtureStr,ratioStr,...betCols,mgrTotal>0?parseFloat(mgrTotal.toFixed(2)):"",...netCols];
 }
 
 async function getLastRow(){
@@ -775,7 +776,7 @@ async function saveToSheet(){
       const lastRow=await getLastRow();
       const startRow=lastRow+1; // next empty row after existing data
       const sheetRows=state.newRows.map(buildSheetRow);
-      await sheetsWrite(`Sheet1!A${startRow}:AI${startRow+sheetRows.length-1}`,sheetRows);
+      await sheetsWrite(`Sheet1!A${startRow}:AJ${startRow+sheetRows.length-1}`,sheetRows);
       state.newRows=null; // clear after writing
     }
     syncStatus('✓ Synced to Sheet','ok');
