@@ -485,8 +485,12 @@ function mgr_parse(){
   state.mgrPct=parseFloat(document.getElementById('mgr-pct').value)||1;
   const result=parseMessage(raw);
   if(!result.ok){err.textContent=result.error;return;}
-  state.newRows=result.rows;
-  state.rows=[...state.rows,...result.rows];
+  // Deduplicate: skip rows where same date+match+roundNum already exists
+  const isNew=r=>!state.rows.some(e=>e.date===r.date&&normName(e.match)===normName(r.match)&&e.ratio.roundNum===r.ratio.roundNum);
+  const fresh=result.rows.filter(isNew);
+  if(!fresh.length){err.textContent='These matches are already saved. No duplicates added.';return;}
+  state.newRows=fresh;
+  state.rows=[...state.rows,...fresh];
   rebuildPinGrid();
   renderManager();
   saveToSheet();
@@ -575,7 +579,7 @@ function savePins(){
 function fmtPL(v){
   if(v===null||v===undefined) return '<span class="val-n">—</span>';
   const n=parseFloat(v);
-  return `<span class="${n>=0?'val-win':'val-loss'}">${n>=0?'+':''}₹${Math.abs(n).toFixed(2)}</span>`;
+  return `<span class="${n>=0?'val-win':'val-loss'}">${n>=0?'+':'-'}₹${Math.abs(n).toFixed(2)}</span>`;
 }
 function fmtMgr(v){
   if(v===null||v===undefined) return '<span class="val-n">—</span>';
