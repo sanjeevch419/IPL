@@ -10,45 +10,61 @@
   --bg:#0f0f0f; --surface:#1a1a1a; --surface2:#222; --border:#2a2a2a; --border2:#333;
   --text:#f0f0f0; --text2:#888; --text3:#555;
   --accent:#c8f135; --accent-dim:rgba(200,241,53,0.12); --accent-dim2:rgba(200,241,53,0.05);
-  --red:#ff5c5c; --red-dim:rgba(255,92,92,0.12);
-  --green:#4dca7a; --green-dim:rgba(77,202,122,0.12);
+  --red:#ff5c5c; --green:#4dca7a; --green-dim:rgba(77,202,122,0.12);
   --amber:#f5a623; --amber-dim:rgba(245,166,35,0.12);
   --radius:10px; --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;}
 .app{min-height:100vh;display:flex;flex-direction:column;}
+
+/* TOPBAR */
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;}
 .logo{font-family:var(--mono);font-size:13px;color:var(--accent);letter-spacing:.06em;}
 .topbar-right{display:flex;align-items:center;gap:10px;}
 .user-chip{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border2);border-radius:999px;padding:5px 12px 5px 8px;font-size:12px;}
 .user-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
 .user-dot.mgr{background:var(--amber);}
+
+/* SCREENS */
 .screen{display:none;flex:1;}
 .screen.active{display:flex;flex-direction:column;}
-
-/* CENTERED CARD SCREENS */
 .center-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;}
 .center-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:2rem;}
 .eyebrow{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
 .card-title-lg{font-size:22px;font-weight:600;margin-bottom:6px;}
 .card-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
+
+/* FIELDS */
 .field{margin-bottom:14px;}
 .field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-family:var(--mono);}
 .field input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:border-color .15s;}
 .field input:focus{border-color:var(--accent);}
 .field .hint{font-size:11px;color:var(--text3);margin-top:5px;font-family:var(--mono);}
+
+/* BUTTONS */
 .btn{padding:10px 20px;border-radius:var(--radius);font-size:13px;font-family:var(--font);font-weight:500;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text);transition:all .15s;}
 .btn:hover{background:var(--surface2);}
 .btn.accent{background:var(--accent);color:#0f0f0f;border-color:var(--accent);}
 .btn.accent:hover{opacity:.88;}
 .btn.sm{padding:7px 14px;font-size:12px;}
-.btn.ghost{border-color:transparent;color:var(--text3);}
-.btn.ghost:hover{color:var(--text2);background:transparent;}
+.btn.ghost{border-color:transparent;color:var(--text3);font-size:12px;}
+.btn.ghost:hover{color:var(--text2);}
+.btn.google{background:#fff;color:#3c4043;border:1px solid #dadce0;display:flex;align-items:center;gap:10px;justify-content:center;width:100%;font-size:14px;padding:11px 20px;border-radius:var(--radius);cursor:pointer;font-family:var(--font);font-weight:500;transition:background .15s;}
+.btn.google:hover{background:#f8f9fa;}
+
 .err-msg{font-size:12px;color:var(--red);margin-top:10px;min-height:16px;}
 .divider{display:flex;align-items:center;gap:12px;margin:1.25rem 0;}
 .divider hr{flex:1;border:none;border-top:1px solid var(--border2);}
 .divider span{font-size:11px;color:var(--text3);font-family:var(--mono);}
+
+/* GOOGLE CONNECT BANNER */
+.gconnect-banner{background:var(--amber-dim);border:1px solid var(--amber);border-radius:var(--radius);padding:16px 18px;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.gconnect-banner.connected{background:var(--green-dim);border-color:var(--green);}
+.gconnect-text{font-size:13px;line-height:1.5;}
+.gconnect-text strong{display:block;margin-bottom:2px;}
+.gconnect-text.connected strong{color:var(--green);}
+.gconnect-text span{color:var(--text2);font-size:12px;}
 
 /* MAIN */
 .main{flex:1;padding:24px;max-width:1000px;width:100%;margin:0 auto;}
@@ -89,7 +105,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .round-tag{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:999px;border:1px solid var(--border2);}
 .winner-tag{font-family:var(--mono);font-size:11px;color:var(--green);background:var(--green-dim);padding:3px 9px;border-radius:999px;}
 .pending-tag{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:999px;border:1px solid var(--border2);}
-
 table{width:100%;border-collapse:collapse;}
 th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text3);border-bottom:1px solid var(--border);font-weight:400;}
 td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;}
@@ -101,7 +116,6 @@ tr:hover td{background:var(--accent-dim2);}
 .val-loss{color:var(--red);font-family:var(--mono);font-weight:500;}
 .val-mgr{color:var(--amber);font-family:var(--mono);}
 .val-n{color:var(--text3);font-family:var(--mono);}
-
 .summary-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:1rem;}
 .s-tile{flex:1;min-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
 .s-label{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;}
@@ -114,13 +128,10 @@ tr:hover td{background:var(--accent-dim2);}
 .kw{color:var(--accent);}
 .vl{color:var(--text);}
 .no-data{padding:24px;text-align:center;color:var(--text3);font-size:13px;font-family:var(--mono);}
-
-/* SETUP STEPS */
 .setup-steps{list-style:none;counter-reset:step;margin-top:4px;}
 .setup-steps li{counter-increment:step;display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);line-height:1.6;}
 .setup-steps li:last-child{border-bottom:none;}
 .setup-steps li::before{content:counter(step);min-width:20px;height:20px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:11px;font-family:var(--mono);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
-
 @media(max-width:600px){.main{padding:14px;}.topbar{padding:12px 14px;}th,td{padding:7px 8px;font-size:12px;}}
 </style>
 </head>
@@ -138,53 +149,37 @@ tr:hover td{background:var(--accent-dim2);}
   </div>
 </div>
 
-<!-- SETUP SCREEN (first time only) -->
+<!-- SETUP SCREEN -->
 <div class="screen active" id="screen-setup">
   <div class="center-wrap">
     <div class="center-card">
       <div class="eyebrow">One-time setup</div>
       <div class="card-title-lg">Connect your account</div>
-      <div class="card-sub">These are saved privately on this device only. Never visible in source code.</div>
-
+      <div class="card-sub">Saved privately on this device only. Nothing sensitive is stored in the code.</div>
       <div class="field">
         <label>Google Sheet ID</label>
         <input type="text" id="setup-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..."/>
-        <div class="hint">From your Sheet URL: /spreadsheets/d/<strong>THIS_PART</strong>/edit</div>
+        <div class="hint">From Sheet URL → /spreadsheets/d/<strong>THIS_PART</strong>/edit</div>
       </div>
       <div class="field">
         <label>API Key</label>
         <input type="text" id="setup-api-key" placeholder="AIzaSyD..."/>
-        <div class="hint">From Google Cloud → Credentials → API Keys</div>
       </div>
       <div class="field">
         <label>OAuth Client ID</label>
         <input type="text" id="setup-client-id" placeholder="1234567890-abc.apps.googleusercontent.com"/>
-        <div class="hint">From Google Cloud → Credentials → OAuth 2.0 Client IDs</div>
       </div>
-
-      <div class="divider"><hr/><span>manager account</span><hr/></div>
-
+      <div class="divider"><hr/><span>manager pin</span><hr/></div>
       <div class="field">
-        <label>Manager PIN</label>
-        <input type="password" id="setup-mgr-pin" placeholder="Choose a strong PIN" maxlength="16"/>
-        <div class="hint">Only you know this. Keep it secret.</div>
+        <label>Choose Manager PIN</label>
+        <input type="password" id="setup-mgr-pin" placeholder="Something only you know" maxlength="16"/>
       </div>
       <div class="field">
         <label>Confirm Manager PIN</label>
         <input type="password" id="setup-mgr-pin2" placeholder="Repeat PIN" maxlength="16"/>
       </div>
-
       <div class="err-msg" id="setup-err"></div>
       <button class="btn accent" style="width:100%;margin-top:4px;" onclick="doSetup()">Save &amp; Continue →</button>
-
-      <div style="margin-top:1.5rem;">
-        <div class="muted" style="margin-bottom:8px;">Don't have these yet?</div>
-        <ul class="setup-steps">
-          <li>Go to sheets.google.com → create a sheet named <strong>IPL Ledger</strong> → add a 2nd tab named <strong>APP_DATA</strong> → copy the Sheet ID from the URL</li>
-          <li>Go to console.cloud.google.com → enable Google Sheets API → create an API Key → create an OAuth 2.0 Client ID (Web application type)</li>
-          <li>In the OAuth Client ID, add your app URL to Authorised JavaScript origins</li>
-        </ul>
-      </div>
     </div>
   </div>
 </div>
@@ -207,8 +202,8 @@ tr:hover td{background:var(--accent-dim2);}
       </div>
       <div class="err-msg" id="login-err"></div>
       <button class="btn accent" style="width:100%;margin-top:4px;" onclick="doLogin()">Sign in →</button>
-      <div style="margin-top:12px;text-align:right;">
-        <button class="btn ghost" style="font-size:11px;" onclick="show('screen-setup')">⚙ Reconfigure</button>
+      <div style="margin-top:10px;text-align:right;">
+        <button class="btn ghost" onclick="showSetup()">⚙ Reconfigure</button>
       </div>
     </div>
   </div>
@@ -218,6 +213,19 @@ tr:hover td{background:var(--accent-dim2);}
 <div class="screen" id="screen-manager">
   <div class="main">
 
+    <!-- Google Connect Banner -->
+    <div class="gconnect-banner" id="gconnect-banner">
+      <div class="gconnect-text">
+        <strong>Connect your Google Account</strong>
+        <span>Required so the app can read and write your Google Sheet.</span>
+      </div>
+      <button class="btn.google" id="gconnect-btn" onclick="googleSignIn()" style="background:#fff;color:#3c4043;border:1px solid #dadce0;display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;white-space:nowrap;flex-shrink:0;">
+        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Sign in with Google
+      </button>
+    </div>
+
+    <!-- Match input -->
     <div class="card">
       <div class="card-header">
         <div>
@@ -245,7 +253,7 @@ tr:hover td{background:var(--accent-dim2);}
 <span class="kw">Winner:</span> <span class="vl">CSK</span>         ← omit if match not finished yet
 
 <span class="kw">Ratio:</span> <span class="vl">CSK 10:12</span>       ← CSK=underdog, MI=favourite
-<span class="vl">Sanju MI 100</span>            ← Player Team Amount
+<span class="vl">Sanju MI 100</span>
 <span class="vl">Venkata CSK 200</span>
 
 <span class="kw">Ratio:</span> <span class="vl">MI 10:15</span>        ← second innings (optional)
@@ -255,6 +263,7 @@ tr:hover td{background:var(--accent-dim2);}
       </div>
     </div>
 
+    <!-- Player PINs -->
     <div class="card">
       <div class="card-header">
         <div>
@@ -267,7 +276,7 @@ tr:hover td{background:var(--accent-dim2);}
         </div>
       </div>
       <div class="card-body">
-        <p class="muted" style="margin-bottom:14px;">Set a PIN for each player and share it with them privately on WhatsApp.</p>
+        <p class="muted" style="margin-bottom:14px;">Set a PIN for each player and share it privately on WhatsApp.</p>
         <div class="pin-grid" id="pin-grid"></div>
       </div>
     </div>
@@ -283,16 +292,15 @@ tr:hover td{background:var(--accent-dim2);}
   </div>
 </div>
 
-</div><!-- end .app -->
+</div>
 
 <script>
-// ── PLAYERS (your exact sheet column order) ────────────────────
+// ── PLAYERS ────────────────────────────────────────────────────
 const PLAYERS = [
   'Sanju','Venkata','Karthik','Teja','Uday','Mohan','Rajesh',
   'Shiva Korwar','Pavan','Baddam','Avinash','Varun','Sandeep',
   'Ujwal','RaviTeja','Sivaji'
 ];
-
 function normName(n){ return n.toLowerCase().replace(/[\s\-_]/g,''); }
 const PLAYER_NORM = PLAYERS.map(normName);
 function matchPlayer(raw){
@@ -301,15 +309,15 @@ function matchPlayer(raw){
   return i>=0?PLAYERS[i]:null;
 }
 
-// ── CONFIG (stored in localStorage, never in code) ─────────────
+// ── CONFIG (localStorage only — never in code) ─────────────────
 function getCfg(){
-  try{ return JSON.parse(localStorage.getItem('ipl_cfg')||'{}'); }
+  try{ return JSON.parse(localStorage.getItem('ipl_cfg')||'null')||{}; }
   catch(e){ return {}; }
 }
-function saveCfg(cfg){ localStorage.setItem('ipl_cfg',JSON.stringify(cfg)); }
+function saveCfg(c){ localStorage.setItem('ipl_cfg',JSON.stringify(c)); }
 
 // ── STATE ──────────────────────────────────────────────────────
-let state = { rows:[], pins:{}, mgrPct:1, currentUser:null };
+let state={ rows:[], pins:{}, mgrPct:1, currentUser:null, gapiReady:false, gSignedIn:false };
 
 const EXAMPLE=`Date: 01-Apr-2025
 Match: MI vs CSK
@@ -330,6 +338,14 @@ Teja CSK 200
 Uday MI 150`;
 
 // ── SETUP ──────────────────────────────────────────────────────
+function showSetup(){
+  const cfg=getCfg();
+  if(cfg.sheetId) document.getElementById('setup-sheet-id').value=cfg.sheetId;
+  if(cfg.apiKey)  document.getElementById('setup-api-key').value=cfg.apiKey;
+  if(cfg.clientId)document.getElementById('setup-client-id').value=cfg.clientId;
+  show('screen-setup');
+}
+
 function doSetup(){
   const sheetId  = document.getElementById('setup-sheet-id').value.trim();
   const apiKey   = document.getElementById('setup-api-key').value.trim();
@@ -338,15 +354,14 @@ function doSetup(){
   const pin2     = document.getElementById('setup-mgr-pin2').value.trim();
   const err      = document.getElementById('setup-err');
   err.textContent='';
-
-  if(!sheetId){ err.textContent='Enter your Sheet ID.'; return; }
-  if(!apiKey){  err.textContent='Enter your API Key.';  return; }
-  if(!clientId){err.textContent='Enter your Client ID.';return; }
-  if(!pin){     err.textContent='Choose a manager PIN.';return; }
-  if(pin!==pin2){err.textContent='PINs do not match.'; return; }
-
-  saveCfg({sheetId,apiKey,clientId,mgrPin:pin});
-  initGapi(clientId,apiKey);
+  if(!sheetId) { err.textContent='Enter your Sheet ID.'; return; }
+  if(!apiKey)  { err.textContent='Enter your API Key.';  return; }
+  if(!clientId){ err.textContent='Enter your Client ID.';return; }
+  if(!pin)     { err.textContent='Choose a manager PIN.';return; }
+  if(pin!==pin2){ err.textContent='PINs do not match.';  return; }
+  const cfg=getCfg();
+  saveCfg({...cfg, sheetId, apiKey, clientId, mgrPin:pin});
+  loadGapi(clientId, apiKey);
   show('screen-login');
 }
 
@@ -359,15 +374,18 @@ function doLogin(){
   err.textContent='';
   if(!rawName){err.textContent='Enter your name.';return;}
   if(!pin){err.textContent='Enter your PIN.';return;}
+  if(!cfg.mgrPin){err.textContent='App not configured. Contact manager.';return;}
 
   if(normName(rawName)==='manager' && pin===cfg.mgrPin){
     state.currentUser='MANAGER';
     showTopbar('Manager',true);
     show('screen-manager');
+    updateGconnectBanner();
     loadFromSheet();
     return;
   }
 
+  // Try loading pins from sheet first if not loaded yet
   const matched=matchPlayer(rawName);
   if(matched && state.pins[matched] && state.pins[matched]===pin){
     state.currentUser=matched;
@@ -376,7 +394,39 @@ function doLogin(){
     loadFromSheetPlayer(matched);
     return;
   }
+
+  // If pins not loaded yet, try loading from sheet then re-check
+  if(matched && !state.pins[matched]){
+    loadPinsFromSheetThenLogin(matched, pin);
+    return;
+  }
+
   err.textContent='Incorrect name or PIN. Contact the manager.';
+}
+
+async function loadPinsFromSheetThenLogin(matched, pin){
+  const err=document.getElementById('login-err');
+  err.textContent='Checking…';
+  try{
+    const val=await sheetsReadPublic('APP_DATA!A1');
+    if(val){
+      const d=JSON.parse(val);
+      state.pins=d.pins||{};
+      state.rows=d.rows||[];
+      state.mgrPct=d.mgrPct||1;
+    }
+    if(state.pins[matched] && state.pins[matched]===pin){
+      state.currentUser=matched;
+      err.textContent='';
+      showTopbar(matched,false);
+      show('screen-player');
+      renderPlayer(matched);
+    } else {
+      err.textContent='Incorrect name or PIN. Contact the manager.';
+    }
+  } catch(e){
+    err.textContent='Incorrect name or PIN. Contact the manager.';
+  }
 }
 
 function doLogout(){
@@ -387,14 +437,47 @@ function doLogout(){
   document.getElementById('topbar-right').style.display='none';
   show('screen-login');
 }
+
 function showTopbar(name,isMgr){
   document.getElementById('topbar-right').style.display='flex';
   document.getElementById('user-chip-name').textContent=name;
   document.getElementById('user-dot').className='user-dot'+(isMgr?' mgr':'');
 }
+
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+}
+
+// ── GOOGLE CONNECT ─────────────────────────────────────────────
+function updateGconnectBanner(){
+  const banner=document.getElementById('gconnect-banner');
+  const btn=document.getElementById('gconnect-btn');
+  if(state.gSignedIn){
+    banner.className='gconnect-banner connected';
+    banner.querySelector('.gconnect-text').innerHTML=
+      '<strong style="color:var(--green)">✓ Google Account connected</strong><span>Sheet sync is active.</span>';
+    btn.style.display='none';
+  } else {
+    banner.className='gconnect-banner';
+    banner.querySelector('.gconnect-text').innerHTML=
+      '<strong>Connect your Google Account</strong><span>Required to read and write your Google Sheet.</span>';
+    btn.style.display='flex';
+  }
+}
+
+function googleSignIn(){
+  if(!state.gapiReady){
+    alert('Google API still loading. Please wait a moment and try again.');
+    return;
+  }
+  gapi.auth2.getAuthInstance().signIn().then(()=>{
+    state.gSignedIn=true;
+    updateGconnectBanner();
+    loadFromSheet();
+  }).catch(e=>{
+    alert('Google sign-in failed: '+e.error);
+  });
 }
 
 // ── PARSE ──────────────────────────────────────────────────────
@@ -429,7 +512,7 @@ function parseMessage(raw){
     if(/^ratio:/i.test(line)){
       const rStr=line.replace(/^ratio:\s*/i,'').trim();
       const rm=rStr.match(/^(.+?)\s+(\d+):(\d+)$/i);
-      if(!rm) return {ok:false,error:'Bad ratio format: '+rStr};
+      if(!rm) return {ok:false,error:'Bad ratio: '+rStr};
       roundNum++;
       currentRatio={underdog:rm[1].trim().toUpperCase(),low:parseInt(rm[2]),high:parseInt(rm[3]),roundNum,bets:{}};
       rows.push({date,match,teams,winner,ratio:currentRatio});
@@ -451,23 +534,17 @@ function parseMessage(raw){
 
 // ── ODDS CALC ──────────────────────────────────────────────────
 // ratio: underdog LOW:HIGH
-// e.g. CSK 10:12 → CSK underdog, MI favourite
-//
-// Bet FAVOURITE → win: +stake / lose: -(stake × high/low)
-// Bet UNDERDOG  → win: +(stake × high/low) / lose: -stake
-
+// Bet FAVOURITE → win:+stake  lose:-(stake×high/low)
+// Bet UNDERDOG  → win:+(stake×high/low)  lose:-stake
 function calcBet(ratio,bet,winner){
-  if(!winner||!bet) return {gross:null,mgr:null,net:null,won:null};
-  const isFav = bet.team!==ratio.underdog;
-  const won   = bet.team===winner;
+  if(!winner||!bet) return {gross:null,mgr:null,net:null};
+  const isFav=bet.team!==ratio.underdog;
+  const won=bet.team===winner;
   let gross;
-  if(isFav){
-    gross = won ? bet.amount : -(bet.amount*ratio.high/ratio.low);
-  } else {
-    gross = won ? (bet.amount*ratio.high/ratio.low) : -bet.amount;
-  }
+  if(isFav) gross=won?bet.amount:-(bet.amount*ratio.high/ratio.low);
+  else       gross=won?(bet.amount*ratio.high/ratio.low):-bet.amount;
   const mgr=Math.abs(gross)*(state.mgrPct/100);
-  return {gross, mgr, net:gross-mgr, won};
+  return {gross,mgr,net:gross-mgr,won};
 }
 
 // ── PINS ───────────────────────────────────────────────────────
@@ -515,7 +592,7 @@ function renderManager(){
   if(!state.rows.length){out.innerHTML='';return;}
   let html=''; let totalMgr=0;
   for(const row of state.rows){
-    const ratio=row.ratio, winner=row.winner;
+    const ratio=row.ratio,winner=row.winner;
     const favTeam=row.teams.find(t=>t!==ratio.underdog)||row.teams[0];
     let roundMgr=0;
     html+=`<div class="card match-block">
@@ -574,7 +651,7 @@ function renderPlayer(name){
   }
   let html=''; let totalNet=0; let hasResult=false;
   for(const row of myRows){
-    const ratio=row.ratio, bet=ratio.bets[name], winner=row.winner;
+    const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
     const c=calcBet(ratio,bet,winner);
     if(c.net!==null){totalNet+=c.net;hasResult=true;}
     html+=`<div class="card match-block">
@@ -615,11 +692,11 @@ function syncStatus(msg,cls=''){
 }
 
 function buildSheetRow(row){
-  const ratio=row.ratio, winner=row.winner;
+  const ratio=row.ratio,winner=row.winner;
   const fixture=`${row.date} ${row.match}`;
   const ratioStr=`${ratio.underdog} ${ratio.low}:${ratio.high}`;
   let mgrTotal=0;
-  const betCols=PLAYERS.map(p=>{ const b=ratio.bets[p]; return b?b.amount:''; });
+  const betCols=PLAYERS.map(p=>{const b=ratio.bets[p];return b?b.amount:'';});
   const netCols=PLAYERS.map(p=>{
     const b=ratio.bets[p]; if(!b||!winner) return '';
     const c=calcBet(ratio,b,winner);
@@ -630,6 +707,10 @@ function buildSheetRow(row){
 }
 
 async function saveToSheet(){
+  if(!state.gSignedIn){
+    syncStatus('✗ Connect Google Account first','err');
+    return;
+  }
   const cfg=getCfg(); if(!cfg.sheetId) return;
   syncStatus('Saving…','loading');
   try{
@@ -645,6 +726,7 @@ async function saveToSheet(){
 }
 
 async function loadFromSheet(){
+  if(!state.gSignedIn) return;
   const cfg=getCfg(); if(!cfg.sheetId) return;
   syncStatus('Loading…','loading');
   try{
@@ -663,22 +745,20 @@ async function loadFromSheet(){
 }
 
 async function loadFromSheetPlayer(name){
-  const cfg=getCfg();
-  if(cfg.sheetId){
-    try{
-      const val=await sheetsRead('APP_DATA!A1');
-      if(val){
-        const d=JSON.parse(val);
-        state.rows=d.rows||[];
-        state.pins=d.pins||{};
-        state.mgrPct=d.mgrPct||1;
-      }
-    }catch(e){}
-  }
+  try{
+    const val=await sheetsReadPublic('APP_DATA!A1');
+    if(val){
+      const d=JSON.parse(val);
+      state.rows=d.rows||[];
+      state.pins=d.pins||{};
+      state.mgrPct=d.mgrPct||1;
+    }
+  }catch(e){}
   renderPlayer(name);
 }
 
-async function sheetsRead(range){
+// Read using API key only (no auth needed — for players)
+async function sheetsReadPublic(range){
   const cfg=getCfg();
   const url=`https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}?key=${cfg.apiKey}`;
   const r=await fetch(url); const j=await r.json();
@@ -686,14 +766,34 @@ async function sheetsRead(range){
   return j.values?.[0]?.[0]||null;
 }
 
-async function sheetsWrite(range,values){
-  await gapi.client.sheets.spreadsheets.values.update({
-    spreadsheetId:getCfg().sheetId,
-    range, valueInputOption:'RAW', resource:{values}
-  });
+// Read using OAuth (for manager)
+async function sheetsRead(range){
+  const cfg=getCfg();
+  const token=gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}`;
+  const r=await fetch(url,{headers:{Authorization:'Bearer '+token}});
+  const j=await r.json();
+  if(j.error) throw new Error(j.error.message);
+  return j.values?.[0]?.[0]||null;
 }
 
-function initGapi(clientId,apiKey){
+// Write using OAuth
+async function sheetsWrite(range,values){
+  const cfg=getCfg();
+  const token=gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
+  const r=await fetch(url,{
+    method:'PUT',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({values})
+  });
+  const j=await r.json();
+  if(j.error) throw new Error(j.error.message);
+  return j;
+}
+
+// ── GAPI INIT ──────────────────────────────────────────────────
+function loadGapi(clientId,apiKey){
   if(document.getElementById('gapi-script')) return;
   const s=document.createElement('script');
   s.id='gapi-script';
@@ -701,14 +801,21 @@ function initGapi(clientId,apiKey){
   s.onload=()=>{
     gapi.load('client:auth2',()=>{
       gapi.client.init({
-        apiKey,clientId,
-        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-        scope:'https://www.googleapis.com/auth/spreadsheets'
+        apiKey,
+        clientId,
+        scope:'https://www.googleapis.com/auth/spreadsheets',
+        discoveryDocs:['https://sheets.googleapis.com/$discovery/rest?version=v4']
       }).then(()=>{
-        if(!gapi.auth2.getAuthInstance().isSignedIn.get()){
-          gapi.auth2.getAuthInstance().signIn();
-        }
-      });
+        state.gapiReady=true;
+        const authInstance=gapi.auth2.getAuthInstance();
+        state.gSignedIn=authInstance.isSignedIn.get();
+        authInstance.isSignedIn.listen(signed=>{
+          state.gSignedIn=signed;
+          updateGconnectBanner();
+        });
+        updateGconnectBanner();
+        if(state.gSignedIn && state.currentUser==='MANAGER') loadFromSheet();
+      }).catch(e=>console.error('gapi init error',e));
     });
   };
   document.head.appendChild(s);
@@ -718,11 +825,9 @@ function initGapi(clientId,apiKey){
 window.addEventListener('DOMContentLoaded',()=>{
   const cfg=getCfg();
   if(cfg.sheetId && cfg.apiKey && cfg.clientId && cfg.mgrPin){
-    // Already configured — go to login
-    initGapi(cfg.clientId,cfg.apiKey);
+    loadGapi(cfg.clientId, cfg.apiKey);
     show('screen-login');
   } else {
-    // First time — show setup
     show('screen-setup');
   }
   rebuildPinGrid();
