@@ -364,7 +364,11 @@ function doLogin(){
   err.textContent='';
   if(!rawName){err.textContent='Enter your name.';return;}
   if(!pin){err.textContent='Enter your PIN.';return;}
-  if(!cfg.mgrPin){err.textContent='App not configured yet.';return;}
+
+  if(normName(rawName)==='manager'){
+    if(!cfg.mgrPin){err.textContent='Manager not set up on this device. Use ⚙ Reconfigure.';return;}
+    if(pin!==cfg.mgrPin){err.textContent='Incorrect manager PIN.';return;}
+  }
 
   if(normName(rawName)==='manager' && pin===cfg.mgrPin){
     state.currentUser='MANAGER';
