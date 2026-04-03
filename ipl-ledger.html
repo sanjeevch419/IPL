@@ -291,12 +291,17 @@ function matchPlayer(raw){
   return i>=0?PLAYERS[i]:null;
 }
 
+// ── DEFAULT SCRIPT URL (baked in so players never see setup screen)
+// Manager: replace this with your Apps Script /exec URL, then push to GitHub
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJUmnfJjDIgfHOOjQWtALSgigBrF9IZaHzGSoQDSyCAuWBb_0V14XEue3Bk3bRPrKWkA/exec';  // ← paste your /exec URL here
+
 // ── CONFIG ─────────────────────────────────────────────────────
 function getCfg(){
   try{ return JSON.parse(localStorage.getItem('ipl_cfg')||'null')||{}; }
   catch(e){ return {}; }
 }
 function saveCfg(c){ localStorage.setItem('ipl_cfg',JSON.stringify(c)); }
+function getScriptUrl(){ return getCfg().scriptUrl || DEFAULT_SCRIPT_URL; }
 
 // ── STATE ──────────────────────────────────────────────────────
 let state={
@@ -728,9 +733,9 @@ async function sheetsRead(range){
 
 // Fetch player data via Apps Script (sheet stays private)
 async function fetchPlayerData(name,pin){
-  const cfg=getCfg();
-  if(!cfg.scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
-  const url=`${cfg.scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
+  const scriptUrl=getScriptUrl();
+  if(!scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
+  const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
   const r=await fetch(url);
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||'Login failed');
@@ -821,15 +826,18 @@ async function loadFromSheet(){
 // ── INIT ───────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{
   const cfg=getCfg();
-  if(cfg.sheetId && cfg.scriptUrl && cfg.clientId && cfg.mgrPin){
+  // Players only need the scriptUrl (baked in above) — go straight to login
+  // Manager needs full config — uses ⚙ Reconfigure to set up
+  if(getScriptUrl()){
     show('screen-login');
-    // Init GIS after its script loads
-    const tryInit=setInterval(()=>{
-      if(window.google && window.google.accounts){
-        clearInterval(tryInit);
-        initGIS();
-      }
-    },200);
+    if(cfg.clientId){
+      const tryInit=setInterval(()=>{
+        if(window.google && window.google.accounts){
+          clearInterval(tryInit);
+          initGIS();
+        }
+      },200);
+    }
   } else {
     show('screen-setup');
   }
