@@ -616,7 +616,8 @@ function renderManager(){
   const out=document.getElementById('mgr-output');
   if(!state.rows.length){out.innerHTML='';return;}
   let html=''; let totalMgr=0;
-  for(let i=0;i<state.rows.length;i++){
+  // Newest first — iterate in reverse but keep original index for delete
+  for(let i=state.rows.length-1;i>=0;i--){
     const row=state.rows[i];
     const ratio=row.ratio,winner=row.winner;
     const favTeam=row.teams.find(t=>t!==ratio.underdog)||row.teams[0];
@@ -676,39 +677,36 @@ function renderPlayer(name){
     out.innerHTML=`<div class="card"><div class="no-data">No bets found for ${name} yet.</div></div>`;
     return;
   }
-  let html=''; let totalNet=0; let hasResult=false;
-  for(const row of myRows){
+  let totalNet=0; let hasResult=false;
+  // Newest first
+  const sorted=[...myRows].reverse();
+  let html=`<div class="card"><div style="overflow-x:auto;"><table>
+    <thead><tr>
+      <th>Date</th><th>Match</th><th>Winner</th><th>Ratio</th>
+      <th>Backed</th><th>Stake</th><th>Gross P&amp;L</th><th>Mgr ${state.mgrPct}%</th><th>Your Net</th>
+    </tr></thead><tbody>`;
+  for(const row of sorted){
     const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
     const c=calcBet(ratio,bet,winner,name);
     if(c.net!==null){totalNet+=c.net;hasResult=true;}
-    html+=`<div class="card match-block">
-      <div class="match-head">
-        <span class="match-name">${row.match}</span>
-        <span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span>
-        <span class="round-tag">Round ${ratio.roundNum}</span>
-        <span class="muted" style="font-size:11px;">${row.date}</span>
-        ${winner?`<span class="winner-tag">✓ ${winner} won</span>`:`<span class="pending-tag">Awaiting result</span>`}
-      </div>
-      <div style="overflow-x:auto;"><table>
-        <thead><tr>
-          <th>Backed</th><th>Your stake</th>
-          <th>Gross P&amp;L</th><th>Mgr ${state.mgrPct}%</th><th>Your net</th>
-        </tr></thead><tbody>
-        <tr class="my-row">
-          <td style="font-family:var(--mono)">${bet.team}</td>
-          <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
-          <td>${fmtPL(c.gross)}</td><td>${fmtMgr(c.mgr)}</td><td>${fmtPL(c.net)}</td>
-        </tr>
-        </tbody></table></div>
-      <div class="locked-notice">🔒 Other players' bets are private</div>
+    html+=`<tr class="my-row">
+      <td style="font-family:var(--mono);white-space:nowrap;font-size:12px">${row.date}</td>
+      <td style="font-weight:500;white-space:nowrap">${row.match}</td>
+      <td>${winner?`<span class="winner-tag">✓ ${winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
+      <td><span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span></td>
+      <td style="font-family:var(--mono)">${bet.team}</td>
+      <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
+      <td>${fmtPL(c.gross)}</td><td>${fmtMgr(c.mgr)}</td><td>${fmtPL(c.net)}</td>
+    </tr>`;
+  }
+  html+=`</tbody></table></div>`;
+  if(hasResult){
+    html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Total Net P&amp;L</span>
+      <span class="s-val ${totalNet>=0?'win':'loss'}" style="font-size:20px;">${totalNet>=0?'+':'-'}₹${Math.abs(totalNet).toFixed(2)}</span>
     </div>`;
   }
-  if(hasResult){
-    html+=`<div class="summary-row"><div class="s-tile">
-      <div class="s-label">Your total net P&amp;L</div>
-      <div class="s-val ${totalNet>=0?'win':'loss'}">${totalNet>=0?'+':''}₹${totalNet.toFixed(2)}</div>
-    </div></div>`;
-  }
+  html+=`</div>`;
   out.innerHTML=html;
 }
 
