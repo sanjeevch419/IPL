@@ -309,6 +309,7 @@ function getScriptUrl(){ return getCfg().scriptUrl || DEFAULT_SCRIPT_URL; }
 // ── STATE ──────────────────────────────────────────────────────
 let state={
   rows:[], newRows:null, pins:{}, mgrPct:1,
+  cleared:{},          // { playerName: amountCleared }
   currentUser:null,
   accessToken:null,   // GIS token
   tokenExpiry:0
@@ -388,6 +389,7 @@ function doLogin(){
     fetchPlayerData(matched,pin).then(data=>{
       state.rows=data.rows||[];
       state.mgrPct=data.mgrPct||1;
+      state.cleared=data.cleared||{};
       err.textContent='';
       loginAsPlayer(matched);
     }).catch(e=>{
@@ -497,12 +499,8 @@ function mgr_parse(){
   state.mgrPct=parseFloat(document.getElementById('mgr-pct').value)||1;
   const result=parseMessage(raw);
   if(!result.ok){err.textContent=result.error;return;}
-  // Deduplicate: skip rows where same date+match+roundNum already exists
-  const isNew=r=>!state.rows.some(e=>e.date===r.date&&normName(e.match)===normName(r.match)&&e.ratio.roundNum===r.ratio.roundNum);
-  const fresh=result.rows.filter(isNew);
-  if(!fresh.length){err.textContent='These matches are already saved. No duplicates added.';return;}
-  state.newRows=fresh;
-  state.rows=[...state.rows,...fresh];
+  state.newRows=result.rows;
+  state.rows=[...state.rows,...result.rows];
   rebuildPinGrid();
   renderManager();
   saveToSheet();
@@ -614,6 +612,13 @@ async function deleteRow(i){
   await saveToSheet();
 }
 
+// ── CLEARED ────────────────────────────────────────────────────
+function updateCleared(player, value){
+  state.cleared[player]=parseFloat(value)||0;
+  renderManager();
+  saveToSheet();
+}
+
 // ── RENDER MANAGER ─────────────────────────────────────────────
 function renderManager(){
   const out=document.getElementById('mgr-output');
@@ -663,20 +668,23 @@ function renderManager(){
   let summaryHtml=`<div class="card"><div style="overflow-x:auto;"><table>
     <thead><tr>
       <th>Player</th><th>Total Stake</th>
-      <th>Gross P&amp;L</th><th>Mgr ${state.mgrPct}%</th><th>Net P&amp;L</th><th>Pending</th>
+      <th>Gross P&amp;L</th><th>Mgr ${state.mgrPct}%</th><th>Net P&amp;L</th><th>Cleared</th><th>Pending</th>
     </tr></thead><tbody>`;
 
   // Sort by net P&L descending
   activePlayers.sort((a,b)=>totals[b].net-totals[a].net);
   for(const p of activePlayers){
     const t=totals[p];
+    const cleared=state.cleared[p]||0;
+    const pending=t.net>=0 ? t.net-cleared : t.net+cleared;
     summaryHtml+=`<tr>
       <td><span class="pill">${p}</span></td>
       <td style="font-family:var(--mono)">₹${t.stake.toFixed(0)}</td>
       <td>${fmtPL(t.gross)}</td>
       <td>${t.mgr>0?`<span style="font-family:var(--mono);color:var(--amber)">−₹${t.mgr.toFixed(2)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
       <td>${fmtPL(t.net)}</td>
-      <td style="font-family:var(--mono);text-align:center;color:var(--text3)">${t.pending>0?t.pending:'—'}</td>
+      <td><input type="number" class="pct-in" style="width:90px;" value="${cleared||''}" placeholder="0" onblur="updateCleared('${p}',this.value)"/></td>
+      <td>${fmtPL(pending)}</td>
     </tr>`;
   }
   if(!activePlayers.length){
@@ -730,9 +738,19 @@ function renderPlayer(name){
   }
   html+=`</tbody></table></div>`;
   if(hasResult){
+    const clearedAmt=state.cleared[name]||0;
+    const pendingAmt=totalNet>=0 ? totalNet-clearedAmt : totalNet+clearedAmt;
     html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
       <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Total Net P&amp;L</span>
       <span class="s-val ${totalNet>=0?'win':'loss'}" style="font-size:20px;">${totalNet>=0?'+':'-'}₹${Math.abs(totalNet).toFixed(2)}</span>
+    </div>
+    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
+      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
+      <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${clearedAmt>0?'+':''}₹${Math.abs(clearedAmt).toFixed(2)}</span>
+    </div>
+    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pendingAmt)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
+      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
+      <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pendingAmt)<0.01?'var(--green)':'var(--amber)'};">${pendingAmt>=0?'+':'-'}₹${Math.abs(pendingAmt).toFixed(2)}${Math.abs(pendingAmt)<0.01?' ✓ Settled':''}</span>
     </div>`;
   }
   html+=`</div>`;
@@ -820,7 +838,7 @@ async function saveToSheet(){
   syncStatus('Saving…','loading');
   try{
     // Save app state to APP_DATA
-    const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct});
+    const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct,cleared:state.cleared});
     await sheetsWrite('APP_DATA!A1',[[json]]);
 
     // Append only the NEW rows (ones not yet written)
@@ -846,6 +864,7 @@ async function loadFromSheet(){
       state.rows=d.rows||[];
       state.pins=d.pins||{};
       state.mgrPct=d.mgrPct||1;
+      state.cleared=d.cleared||{};
       document.getElementById('mgr-pct').value=state.mgrPct;
     }
     rebuildPinGrid(); renderManager();
