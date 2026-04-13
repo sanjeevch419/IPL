@@ -310,7 +310,8 @@ function getScriptUrl(){ return getCfg().scriptUrl || DEFAULT_SCRIPT_URL; }
 // ── STATE ──────────────────────────────────────────────────────
 let state={
   rows:[], newRows:null, pins:{}, mgrPct:1,
-  cleared:{},          // { playerName: amountCleared }
+  cleared:{1:{},2:{}}, // { phase: { playerName: amountCleared } }
+  currentPhase:2,      // phase assigned to newly parsed data
   editingRow:null,     // index of row open for inline editing
   currentUser:null,
   accessToken:null,   // GIS token
@@ -389,9 +390,9 @@ function doLogin(){
   if(matched){
     err.textContent='Checking…';
     fetchPlayerData(matched,pin).then(data=>{
-      state.rows=data.rows||[];
+      state.rows=(data.rows||[]).map(r=>({...r,phase:r.phase||1}));
       state.mgrPct=data.mgrPct||1;
-      state.cleared=data.cleared||{};
+      state.cleared=migrateCleared(data.cleared);
       err.textContent='';
       loginAsPlayer(matched);
     }).catch(e=>{
@@ -501,6 +502,7 @@ function mgr_parse(){
   state.mgrPct=parseFloat(document.getElementById('mgr-pct').value)||1;
   const result=parseMessage(raw);
   if(!result.ok){err.textContent=result.error;return;}
+  result.rows.forEach(r=>r.phase=state.currentPhase);
   state.newRows=result.rows;
   state.rows=[...state.rows,...result.rows];
   rebuildPinGrid();
@@ -675,9 +677,22 @@ function buildEditForm(i){
   </div>`;
 }
 
-// ── CLEARED ────────────────────────────────────────────────────
-function updateCleared(player, value){
-  state.cleared[player]=parseFloat(value)||0;
+// ── PHASE / CLEARED ────────────────────────────────────────────
+function migrateCleared(c){
+  if(!c||typeof c!=='object') return {1:{},2:{}};
+  if('1' in c||'2' in c) return {1:c[1]||{},2:c[2]||{}};
+  return {1:c,2:{}}; // old flat format → assign to phase 1
+}
+
+function setPhase(ph){
+  state.currentPhase=ph;
+  renderManager();
+  saveToSheet();
+}
+
+function updateCleared(player,value,phase){
+  if(!state.cleared[phase]) state.cleared[phase]={};
+  state.cleared[phase][player]=parseFloat(value)||0;
   renderManager();
   saveToSheet();
 }
@@ -687,41 +702,49 @@ function renderManager(){
   const out=document.getElementById('mgr-output');
   if(!state.rows.length){out.innerHTML='';return;}
 
-  // Build per-player totals
-  const totals={};
-  for(const p of PLAYERS){ totals[p]={stake:0,gross:0,mgr:0,net:0,bets:0,pending:0}; }
-  let totalMgrAll=0;
+  // Phase selector
+  const phaseHtml=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--text2);font-family:var(--mono);">New data → </span>
+    <button class="btn sm${state.currentPhase===1?' accent':''}" onclick="setPhase(1)">Phase 1</button>
+    <button class="btn sm${state.currentPhase===2?' accent':''}" onclick="setPhase(2)">Phase 2</button>
+  </div>`;
+
+  // Build per-phase and overall totals
+  const mk=()=>{const t={};for(const p of PLAYERS)t[p]={stake:0,gross:0,mgr:0,net:0,bets:0};return t;};
+  const totals={1:mk(),2:mk(),all:mk()};
+  const mgrTot={1:0,2:0,all:0};
 
   for(const row of state.rows){
+    const ph=row.phase||1;
     const ratio=row.ratio,winner=row.winner;
     for(const p of PLAYERS){
       const bet=ratio.bets[p]; if(!bet) continue;
-      totals[p].bets++;
-      totals[p].stake+=bet.amount;
+      totals[ph][p].bets++; totals[ph][p].stake+=bet.amount;
+      totals['all'][p].bets++; totals['all'][p].stake+=bet.amount;
       const c=calcBet(ratio,bet,winner,p);
-      if(c.net===null){ totals[p].pending++; }
-      else {
-        totals[p].gross+=c.gross;
-        totals[p].mgr+=c.mgr||0;
-        totals[p].net+=c.net;
-        totalMgrAll+=c.mgr||0;
+      if(c.net!==null){
+        totals[ph][p].gross+=c.gross; totals[ph][p].mgr+=c.mgr||0; totals[ph][p].net+=c.net;
+        totals['all'][p].gross+=c.gross; totals['all'][p].mgr+=c.mgr||0; totals['all'][p].net+=c.net;
+        mgrTot[ph]+=c.mgr||0; mgrTot['all']+=c.mgr||0;
       }
     }
   }
 
-  // Delete/edit controls: list matches newest-first
+  // Manage matches panel
   const detailsOpen=document.querySelector('#mgr-output details')?.open;
-  let deleteHtml=`<details ${detailsOpen?'open':''} style="margin-bottom:16px;"><summary style="cursor:pointer;font-size:12px;color:var(--text3);padding:8px 0;">Manage matches (${state.rows.length})</summary>
+  let manageHtml=`<details ${detailsOpen?'open':''} style="margin-bottom:16px;"><summary style="cursor:pointer;font-size:12px;color:var(--text3);padding:8px 0;">Manage matches (${state.rows.length})</summary>
     <div style="overflow-x:auto;margin-top:8px;"><table>
-      <thead><tr><th>Date</th><th>Match</th><th>Round</th><th>Result</th><th></th></tr></thead><tbody>`;
+      <thead><tr><th>Date</th><th>Match</th><th>Round</th><th>Phase</th><th>Result</th><th></th></tr></thead><tbody>`;
   for(let i=state.rows.length-1;i>=0;i--){
     const row=state.rows[i];
     const ratio=row.ratio;
+    const ph=row.phase||1;
     const isEditing=state.editingRow===i;
-    deleteHtml+=`<tr${isEditing?' class="edit-open"':''}>
+    manageHtml+=`<tr${isEditing?' class="edit-open"':''}>
       <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${row.date}</td>
       <td style="white-space:nowrap">${row.match}</td>
       <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${ratio.underdog} ${ratio.low}:${ratio.high} · R${ratio.roundNum}</td>
+      <td><span class="${ph===2?'ratio-tag':'round-tag'}">P${ph}</span></td>
       <td>${row.winner?`<span class="winner-tag">✓ ${row.winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
       <td style="white-space:nowrap;">
         <button class="btn sm" style="font-size:11px;margin-right:4px;" onclick="openEdit(${i})">Edit</button>
@@ -729,48 +752,64 @@ function renderManager(){
       </td>
     </tr>`;
     if(isEditing){
-      deleteHtml+=`<tr><td colspan="5" style="padding:14px 16px;background:var(--surface2);border-top:2px solid var(--accent);">${buildEditForm(i)}</td></tr>`;
+      manageHtml+=`<tr><td colspan="6" style="padding:14px 16px;background:var(--surface2);border-top:2px solid var(--accent);">${buildEditForm(i)}</td></tr>`;
     }
   }
-  deleteHtml+=`</tbody></table></div></details>`;
+  manageHtml+=`</tbody></table></div></details>`;
 
-  // Summary table
-  const activePlayers=PLAYERS.filter(p=>totals[p].bets>0);
-  let summaryHtml=`<div class="card"><div style="overflow-x:auto;"><table>
-    <thead><tr>
-      <th>Player</th><th>Total Stake</th>
-      <th>Gross P&amp;L</th><th>Mgr ${state.mgrPct}%</th><th>Net P&amp;L</th><th>Cleared</th><th>Pending</th>
-    </tr></thead><tbody>`;
+  // Build one summary table for a given phase key
+  const buildTable=(phKey,label)=>{
+    const t=totals[phKey];
+    const active=PLAYERS.filter(p=>t[p].bets>0);
+    if(!active.length) return '';
+    active.sort((a,b)=>t[b].net-t[a].net);
+    const isAll=phKey==='all';
+    let html=`<div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-header" style="padding:10px 18px;"><div class="card-label">${label}</div></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr>
+          <th>Player</th><th>Stake</th><th>Gross P&amp;L</th>
+          <th>Mgr ${state.mgrPct}%</th><th>Net P&amp;L</th><th>Cleared</th><th>Pending</th>
+        </tr></thead><tbody>`;
+    for(const p of active){
+      const pt=t[p];
+      const cleared=isAll
+        ?(((state.cleared[1]||{})[p]||0)+((state.cleared[2]||{})[p]||0))
+        :((state.cleared[phKey]||{})[p]||0);
+      const pending=pt.net>=0?pt.net-cleared:pt.net+cleared;
+      const clearedCell=isAll
+        ?`<td style="font-family:var(--mono)">${cleared>0?'+':''}₹${Math.abs(cleared).toFixed(2)}</td>`
+        :`<td><input type="number" class="pct-in" style="width:90px;" value="${cleared||''}" placeholder="0" onblur="updateCleared('${p}',this.value,${phKey})"/></td>`;
+      html+=`<tr>
+        <td><span class="pill">${p}</span></td>
+        <td style="font-family:var(--mono)">₹${pt.stake.toFixed(0)}</td>
+        <td>${fmtPL(pt.gross)}</td>
+        <td>${pt.mgr>0?`<span style="font-family:var(--mono);color:var(--amber)">−₹${pt.mgr.toFixed(2)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+        <td>${fmtPL(pt.net)}</td>
+        ${clearedCell}
+        <td>${fmtPL(pending)}</td>
+      </tr>`;
+    }
+    if(!active.length) html+=`<tr><td colspan="7" class="no-data">No bets recorded yet</td></tr>`;
+    html+=`</tbody></table></div>`;
+    if(mgrTot[phKey]>0){
+      html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Manager share</span>
+        <span class="s-val amber" style="font-size:20px;">₹${mgrTot[phKey].toFixed(2)}</span>
+      </div>`;
+    }
+    html+=`</div>`;
+    return html;
+  };
 
-  // Sort by net P&L descending
-  activePlayers.sort((a,b)=>totals[b].net-totals[a].net);
-  for(const p of activePlayers){
-    const t=totals[p];
-    const cleared=state.cleared[p]||0;
-    const pending=t.net>=0 ? t.net-cleared : t.net+cleared;
-    summaryHtml+=`<tr>
-      <td><span class="pill">${p}</span></td>
-      <td style="font-family:var(--mono)">₹${t.stake.toFixed(0)}</td>
-      <td>${fmtPL(t.gross)}</td>
-      <td>${t.mgr>0?`<span style="font-family:var(--mono);color:var(--amber)">−₹${t.mgr.toFixed(2)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
-      <td>${fmtPL(t.net)}</td>
-      <td><input type="number" class="pct-in" style="width:90px;" value="${cleared||''}" placeholder="0" onblur="updateCleared('${p}',this.value)"/></td>
-      <td>${fmtPL(pending)}</td>
-    </tr>`;
-  }
-  if(!activePlayers.length){
-    summaryHtml+=`<tr><td colspan="7" class="no-data">No bets recorded yet</td></tr>`;
-  }
-  summaryHtml+=`</tbody></table></div>`;
-  if(totalMgrAll>0){
-    summaryHtml+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Total manager share</span>
-      <span class="s-val amber" style="font-size:20px;">₹${totalMgrAll.toFixed(2)}</span>
-    </div>`;
-  }
-  summaryHtml+=`</div>`;
+  const hasP1=PLAYERS.some(p=>totals[1][p].bets>0);
+  const hasP2=PLAYERS.some(p=>totals[2][p].bets>0);
+  const summaryHtml=
+    ((hasP1&&hasP2)?buildTable('all','Overall (Phase 1 + Phase 2)'):'')
+    +(hasP2?buildTable(2,'Phase 2'):'')
+    +(hasP1?buildTable(1,'Phase 1'):'');
 
-  out.innerHTML=deleteHtml+summaryHtml;
+  out.innerHTML=phaseHtml+manageHtml+summaryHtml;
 }
 
 // ── RENDER PLAYER ──────────────────────────────────────────────
@@ -785,46 +824,90 @@ function renderPlayer(name){
     out.innerHTML=`<div class="card"><div class="no-data">No bets found for ${name} yet.</div></div>`;
     return;
   }
-  let totalNet=0; let hasResult=false;
-  // Newest first
-  const sorted=[...myRows].reverse();
-  let html=`<div class="card"><div style="overflow-x:auto;"><table>
-    <thead><tr>
-      <th>Date</th><th>Match</th><th>Winner</th><th>Ratio</th>
-      <th>Backed</th><th>Stake</th><th>Gross P&amp;L</th><th>Your Net</th>
-    </tr></thead><tbody>`;
-  for(const row of sorted){
-    const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
-    const c=calcBet(ratio,bet,winner,name);
-    if(c.net!==null){totalNet+=c.net;hasResult=true;}
-    html+=`<tr class="my-row">
-      <td style="font-family:var(--mono);white-space:nowrap;font-size:12px">${row.date}</td>
-      <td style="font-weight:500;white-space:nowrap">${row.match}</td>
-      <td>${winner?`<span class="winner-tag">✓ ${winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
-      <td><span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span></td>
-      <td style="font-family:var(--mono)">${bet.team}</td>
-      <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
-      <td>${fmtPL(c.gross)}</td><td>${fmtPL(c.net)}</td>
-    </tr>`;
+
+  // Build a section (match table + summary footer) for a set of rows
+  const buildSection=(rows,label,phKey)=>{
+    if(!rows.length) return '';
+    let net=0,hasResult=false;
+    const sorted=[...rows].reverse();
+    let html=`<div class="card" style="margin-bottom:1.25rem;">
+      <div class="card-header" style="padding:10px 18px;"><div class="card-label">${label}</div></div>
+      <div style="overflow-x:auto;"><table>
+        <thead><tr>
+          <th>Date</th><th>Match</th><th>Winner</th><th>Ratio</th>
+          <th>Backed</th><th>Stake</th><th>Gross P&amp;L</th><th>Your Net</th>
+        </tr></thead><tbody>`;
+    for(const row of sorted){
+      const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
+      const c=calcBet(ratio,bet,winner,name);
+      if(c.net!==null){net+=c.net;hasResult=true;}
+      html+=`<tr class="my-row">
+        <td style="font-family:var(--mono);white-space:nowrap;font-size:12px">${row.date}</td>
+        <td style="font-weight:500;white-space:nowrap">${row.match}</td>
+        <td>${winner?`<span class="winner-tag">✓ ${winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
+        <td><span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span></td>
+        <td style="font-family:var(--mono)">${bet.team}</td>
+        <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
+        <td>${fmtPL(c.gross)}</td><td>${fmtPL(c.net)}</td>
+      </tr>`;
+    }
+    html+=`</tbody></table></div>`;
+    if(hasResult){
+      const cl=phKey==='all'
+        ?(((state.cleared[1]||{})[name]||0)+((state.cleared[2]||{})[name]||0))
+        :((state.cleared[phKey]||{})[name]||0);
+      const pend=net>=0?net-cl:net+cl;
+      html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
+        <span class="s-val ${net>=0?'win':'loss'}" style="font-size:20px;">${net>=0?'+':'-'}₹${Math.abs(net).toFixed(2)}</span>
+      </div>
+      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
+        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
+        <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${cl>0?'+':''}₹${Math.abs(cl).toFixed(2)}</span>
+      </div>
+      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
+        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
+        <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pend)<0.01?'var(--green)':'var(--amber)'};">${pend>=0?'+':'-'}₹${Math.abs(pend).toFixed(2)}${Math.abs(pend)<0.01?' ✓ Settled':''}</span>
+      </div>`;
+    }
+    html+=`</div>`;
+    return html;
+  };
+
+  const p1=myRows.filter(r=>(r.phase||1)===1);
+  const p2=myRows.filter(r=>(r.phase||1)===2);
+  let html=buildSection(p2,'Phase 2',2)+buildSection(p1,'Phase 1',1);
+
+  // Overall combined summary card (no repeated table — just totals)
+  if(p1.length&&p2.length){
+    let allNet=0,allHasResult=false;
+    for(const row of myRows){
+      const c=calcBet(row.ratio,row.ratio.bets[name],row.winner,name);
+      if(c.net!==null){allNet+=c.net;allHasResult=true;}
+    }
+    if(allHasResult){
+      const c1=((state.cleared[1]||{})[name]||0);
+      const c2=((state.cleared[2]||{})[name]||0);
+      const allCl=c1+c2;
+      const allPend=allNet>=0?allNet-allCl:allNet+allCl;
+      html+=`<div class="card">
+        <div class="card-header" style="padding:10px 18px;"><div class="card-label">Overall (Phase 1 + Phase 2)</div></div>
+        <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
+          <span class="s-val ${allNet>=0?'win':'loss'}" style="font-size:20px;">${allNet>=0?'+':'-'}₹${Math.abs(allNet).toFixed(2)}</span>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
+          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
+          <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${allCl>0?'+':''}₹${Math.abs(allCl).toFixed(2)}</span>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(allPend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
+          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
+          <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(allPend)<0.01?'var(--green)':'var(--amber)'};">${allPend>=0?'+':'-'}₹${Math.abs(allPend).toFixed(2)}${Math.abs(allPend)<0.01?' ✓ Settled':''}</span>
+        </div>
+      </div>`;
+    }
   }
-  html+=`</tbody></table></div>`;
-  if(hasResult){
-    const clearedAmt=state.cleared[name]||0;
-    const pendingAmt=totalNet>=0 ? totalNet-clearedAmt : totalNet+clearedAmt;
-    html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Total Net P&amp;L</span>
-      <span class="s-val ${totalNet>=0?'win':'loss'}" style="font-size:20px;">${totalNet>=0?'+':'-'}₹${Math.abs(totalNet).toFixed(2)}</span>
-    </div>
-    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
-      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
-      <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${clearedAmt>0?'+':''}₹${Math.abs(clearedAmt).toFixed(2)}</span>
-    </div>
-    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pendingAmt)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
-      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
-      <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pendingAmt)<0.01?'var(--green)':'var(--amber)'};">${pendingAmt>=0?'+':'-'}₹${Math.abs(pendingAmt).toFixed(2)}${Math.abs(pendingAmt)<0.01?' ✓ Settled':''}</span>
-    </div>`;
-  }
-  html+=`</div>`;
+
   out.innerHTML=html;
 }
 
@@ -909,7 +992,7 @@ async function saveToSheet(){
   syncStatus('Saving…','loading');
   try{
     // Save app state to APP_DATA
-    const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct,cleared:state.cleared});
+    const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct,cleared:state.cleared,currentPhase:state.currentPhase});
     await sheetsWrite('APP_DATA!A1',[[json]]);
 
     // Append only the NEW rows (ones not yet written)
@@ -932,10 +1015,11 @@ async function loadFromSheet(){
     const val=await sheetsRead('APP_DATA!A1');
     if(val){
       const d=JSON.parse(val);
-      state.rows=d.rows||[];
+      state.rows=(d.rows||[]).map(r=>({...r,phase:r.phase||1}));
       state.pins=d.pins||{};
       state.mgrPct=d.mgrPct||1;
-      state.cleared=d.cleared||{};
+      state.cleared=migrateCleared(d.cleared);
+      state.currentPhase=d.currentPhase||2;
       document.getElementById('mgr-pct').value=state.mgrPct;
     }
     rebuildPinGrid(); renderManager();
