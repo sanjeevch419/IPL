@@ -305,7 +305,7 @@ function getCfg(){
   catch(e){ return {}; }
 }
 function saveCfg(c){ localStorage.setItem('ipl_cfg',JSON.stringify(c)); }
-function getScriptUrl(){ return getCfg().scriptUrl || DEFAULT_SCRIPT_URL; }
+function getScriptUrl(){ return DEFAULT_SCRIPT_URL || getCfg().scriptUrl; }
 
 // ── STATE ──────────────────────────────────────────────────────
 let state={
