@@ -502,6 +502,19 @@ function mgr_parse(){
   state.mgrPct=parseFloat(document.getElementById('mgr-pct').value)||1;
   const result=parseMessage(raw);
   if(!result.ok){err.textContent=result.error;return;}
+  const imbalances=[];
+  for(const row of result.rows){
+    if(!row.winner) continue;
+    let grossSum=0;
+    for(const p of PLAYERS){
+      const bet=row.ratio.bets[p]; if(!bet) continue;
+      const c=calcBet(row.ratio,bet,row.winner,p);
+      if(c.gross!==null) grossSum+=c.gross;
+    }
+    if(Math.abs(grossSum)>0.01)
+      imbalances.push(`${row.match} R${row.ratio.roundNum}: sum = ${grossSum>=0?'+':''}${grossSum.toFixed(2)}`);
+  }
+  if(imbalances.length){err.textContent='Book not balanced — '+imbalances.join('; ');return;}
   result.rows.forEach(r=>r.phase=state.currentPhase);
   state.newRows=result.rows;
   state.rows=[...state.rows,...result.rows];
@@ -515,6 +528,7 @@ function parseMessage(raw){
   let date='',match='',winner='',teams=[];
   let currentRatio=null,roundNum=0;
   const rows=[];
+  const unknownNames=new Set();
   for(const line of lines){
     if(/^date:/i.test(line)){date=line.replace(/^date:\s*/i,'').trim();continue;}
     if(/^match:/i.test(line)){
@@ -535,14 +549,17 @@ function parseMessage(raw){
     if(currentRatio){
       const m=line.match(/^(.+?)\s+([A-Za-z0-9]+)\s+(\d+(?:\.\d+)?)$/);
       if(m){
-        const p=matchPlayer(m[1].trim());
+        const rawName=m[1].trim();
+        const p=matchPlayer(rawName);
         if(p) currentRatio.bets[p]={team:m[2].trim().toUpperCase(),amount:parseFloat(m[3])};
+        else unknownNames.add(rawName);
       }
     }
   }
   if(!date) return {ok:false,error:'Missing Date: line'};
   if(!match) return {ok:false,error:'Missing Match: line'};
   if(!rows.length) return {ok:false,error:'No Ratio: blocks found'};
+  if(unknownNames.size>0) return {ok:false,error:`Unknown player name(s): ${[...unknownNames].join(', ')} — check spelling`};
   return {ok:true,rows};
 }
 
@@ -698,6 +715,29 @@ function updateCleared(player,value,phase){
 }
 
 // ── RENDER MANAGER ─────────────────────────────────────────────
+function checkLimits(){
+  const LIMIT=2500;
+  const breached=[];
+  for(const p of PLAYERS){
+    let p1Net=0,p2Net=0;
+    for(const row of state.rows){
+      const bet=row.ratio.bets[p]; if(!bet) continue;
+      const c=calcBet(row.ratio,bet,row.winner,p);
+      if(c.net===null) continue;
+      if((row.phase||1)===1) p1Net+=c.net; else p2Net+=c.net;
+    }
+    const c1=(state.cleared[1]||{})[p]||0;
+    const c2=(state.cleared[2]||{})[p]||0;
+    const pend1=p1Net>=0?p1Net-c1:p1Net+c1;
+    const pend2=p2Net>=0?p2Net-c2:p2Net+c2;
+    const overallPending=pend1+pend2;
+    if(overallPending<-LIMIT) breached.push(`${p} (₹${Math.abs(overallPending).toFixed(0)})`);
+  }
+  if(breached.length){
+    alert(`⚠️ Limit Alert — the following player(s) have crossed ₹${LIMIT} pending:\n\n${breached.join('\n')}`);
+  }
+}
+
 function renderManager(){
   const out=document.getElementById('mgr-output');
   if(!state.rows.length){out.innerHTML='';return;}
@@ -773,10 +813,18 @@ function renderManager(){
         </tr></thead><tbody>`;
     for(const p of active){
       const pt=t[p];
-      const cleared=isAll
-        ?(((state.cleared[1]||{})[p]||0)+((state.cleared[2]||{})[p]||0))
-        :((state.cleared[phKey]||{})[p]||0);
-      const pending=pt.net>=0?pt.net-cleared:pt.net+cleared;
+      const c1=(state.cleared[1]||{})[p]||0;
+      const c2=(state.cleared[2]||{})[p]||0;
+      const cleared=isAll?c1+c2:((state.cleared[phKey]||{})[p]||0);
+      let pending;
+      if(isAll){
+        const n1=totals[1][p].net, n2=totals[2][p].net;
+        const pend1=n1>=0?n1-c1:n1+c1;
+        const pend2=n2>=0?n2-c2:n2+c2;
+        pending=pend1+pend2;
+      } else {
+        pending=pt.net>=0?pt.net-cleared:pt.net+cleared;
+      }
       const clearedCell=isAll
         ?`<td style="font-family:var(--mono)">${cleared>0?'+':''}₹${Math.abs(cleared).toFixed(2)}</td>`
         :`<td><input type="number" class="pct-in" style="width:90px;" value="${cleared||''}" placeholder="0" onblur="updateCleared('${p}',this.value,${phKey})"/></td>`;
@@ -880,16 +928,21 @@ function renderPlayer(name){
 
   // Overall combined summary card (no repeated table — just totals)
   if(p1.length&&p2.length){
-    let allNet=0,allHasResult=false;
+    let allNet=0,p1Net=0,p2Net=0,allHasResult=false;
     for(const row of myRows){
       const c=calcBet(row.ratio,row.ratio.bets[name],row.winner,name);
-      if(c.net!==null){allNet+=c.net;allHasResult=true;}
+      if(c.net!==null){
+        allNet+=c.net;allHasResult=true;
+        if((row.phase||1)===1) p1Net+=c.net; else p2Net+=c.net;
+      }
     }
     if(allHasResult){
       const c1=((state.cleared[1]||{})[name]||0);
       const c2=((state.cleared[2]||{})[name]||0);
       const allCl=c1+c2;
-      const allPend=allNet>=0?allNet-allCl:allNet+allCl;
+      const pend1=p1Net>=0?p1Net-c1:p1Net+c1;
+      const pend2=p2Net>=0?p2Net-c2:p2Net+c2;
+      const allPend=pend1+pend2;
       html+=`<div class="card">
         <div class="card-header" style="padding:10px 18px;"><div class="card-label">Overall (Phase 1 + Phase 2)</div></div>
         <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
@@ -1022,7 +1075,7 @@ async function loadFromSheet(){
       state.currentPhase=d.currentPhase||2;
       document.getElementById('mgr-pct').value=state.mgrPct;
     }
-    rebuildPinGrid(); renderManager();
+    rebuildPinGrid(); renderManager(); checkLimits();
     syncStatus('✓ Loaded','ok');
     setTimeout(()=>syncStatus(''),2000);
   }catch(e){ syncStatus('✗ '+e.message,'err'); }
