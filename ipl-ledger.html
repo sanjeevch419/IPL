@@ -310,8 +310,8 @@ function getScriptUrl(){ return DEFAULT_SCRIPT_URL || getCfg().scriptUrl; }
 // ── STATE ──────────────────────────────────────────────────────
 let state={
   rows:[], newRows:null, pins:{}, mgrPct:1,
-  cleared:{1:{},2:{}}, // { phase: { playerName: amountCleared } }
-  currentPhase:2,      // phase assigned to newly parsed data
+  cleared:{1:{},2:{},3:{}}, // { phase: { playerName: amountCleared } }
+  currentPhase:3,      // phase assigned to newly parsed data
   editingRow:null,     // index of row open for inline editing
   currentUser:null,
   accessToken:null,   // GIS token
@@ -696,9 +696,9 @@ function buildEditForm(i){
 
 // ── PHASE / CLEARED ────────────────────────────────────────────
 function migrateCleared(c){
-  if(!c||typeof c!=='object') return {1:{},2:{}};
-  if('1' in c||'2' in c) return {1:c[1]||{},2:c[2]||{}};
-  return {1:c,2:{}}; // old flat format → assign to phase 1
+  if(!c||typeof c!=='object') return {1:{},2:{},3:{}};
+  if('1' in c||'2' in c||'3' in c) return {1:c[1]||{},2:c[2]||{},3:c[3]||{}};
+  return {1:c,2:{},3:{}}; // old flat format → assign to phase 1
 }
 
 function setPhase(ph){
@@ -719,18 +719,21 @@ function checkLimits(){
   const LIMIT=2500;
   const breached=[];
   for(const p of PLAYERS){
-    let p1Net=0,p2Net=0;
+    let p1Net=0,p2Net=0,p3Net=0;
     for(const row of state.rows){
       const bet=row.ratio.bets[p]; if(!bet) continue;
       const c=calcBet(row.ratio,bet,row.winner,p);
       if(c.net===null) continue;
-      if((row.phase||1)===1) p1Net+=c.net; else p2Net+=c.net;
+      const ph=row.phase||1;
+      if(ph===1) p1Net+=c.net; else if(ph===2) p2Net+=c.net; else p3Net+=c.net;
     }
     const c1=(state.cleared[1]||{})[p]||0;
     const c2=(state.cleared[2]||{})[p]||0;
+    const c3=(state.cleared[3]||{})[p]||0;
     const pend1=p1Net>=0?p1Net-c1:p1Net+c1;
     const pend2=p2Net>=0?p2Net-c2:p2Net+c2;
-    const overallPending=pend1+pend2;
+    const pend3=p3Net>=0?p3Net-c3:p3Net+c3;
+    const overallPending=pend1+pend2+pend3;
     if(overallPending<-LIMIT) breached.push(`${p} (₹${Math.abs(overallPending).toFixed(0)})`);
   }
   if(breached.length){
@@ -747,12 +750,13 @@ function renderManager(){
     <span style="font-size:12px;color:var(--text2);font-family:var(--mono);">New data → </span>
     <button class="btn sm${state.currentPhase===1?' accent':''}" onclick="setPhase(1)">Phase 1</button>
     <button class="btn sm${state.currentPhase===2?' accent':''}" onclick="setPhase(2)">Phase 2</button>
+    <button class="btn sm${state.currentPhase===3?' accent':''}" onclick="setPhase(3)">Phase 3</button>
   </div>`;
 
   // Build per-phase and overall totals
   const mk=()=>{const t={};for(const p of PLAYERS)t[p]={stake:0,gross:0,mgr:0,net:0,bets:0};return t;};
-  const totals={1:mk(),2:mk(),all:mk()};
-  const mgrTot={1:0,2:0,all:0};
+  const totals={1:mk(),2:mk(),3:mk(),all:mk()};
+  const mgrTot={1:0,2:0,3:0,all:0};
 
   for(const row of state.rows){
     const ph=row.phase||1;
@@ -815,13 +819,15 @@ function renderManager(){
       const pt=t[p];
       const c1=(state.cleared[1]||{})[p]||0;
       const c2=(state.cleared[2]||{})[p]||0;
-      const cleared=isAll?c1+c2:((state.cleared[phKey]||{})[p]||0);
+      const c3=(state.cleared[3]||{})[p]||0;
+      const cleared=isAll?c1+c2+c3:((state.cleared[phKey]||{})[p]||0);
       let pending;
       if(isAll){
-        const n1=totals[1][p].net, n2=totals[2][p].net;
+        const n1=totals[1][p].net, n2=totals[2][p].net, n3=totals[3][p].net;
         const pend1=n1>=0?n1-c1:n1+c1;
         const pend2=n2>=0?n2-c2:n2+c2;
-        pending=pend1+pend2;
+        const pend3=n3>=0?n3-c3:n3+c3;
+        pending=pend1+pend2+pend3;
       } else {
         pending=pt.net>=0?pt.net-cleared:pt.net+cleared;
       }
@@ -852,8 +858,12 @@ function renderManager(){
 
   const hasP1=PLAYERS.some(p=>totals[1][p].bets>0);
   const hasP2=PLAYERS.some(p=>totals[2][p].bets>0);
+  const hasP3=PLAYERS.some(p=>totals[3][p].bets>0);
+  const multiPhase=[hasP1,hasP2,hasP3].filter(Boolean).length>1;
+  const overallLabel=[hasP1&&'Phase 1',hasP2&&'Phase 2',hasP3&&'Phase 3'].filter(Boolean).join(' + ');
   const summaryHtml=
-    ((hasP1&&hasP2)?buildTable('all','Overall (Phase 1 + Phase 2)'):'')
+    (multiPhase?buildTable('all',`Overall (${overallLabel})`):'')
+    +(hasP3?buildTable(3,'Phase 3'):'')
     +(hasP2?buildTable(2,'Phase 2'):'')
     +(hasP1?buildTable(1,'Phase 1'):'');
 
@@ -902,7 +912,7 @@ function renderPlayer(name){
     html+=`</tbody></table></div>`;
     if(hasResult){
       const cl=phKey==='all'
-        ?(((state.cleared[1]||{})[name]||0)+((state.cleared[2]||{})[name]||0))
+        ?(((state.cleared[1]||{})[name]||0)+((state.cleared[2]||{})[name]||0)+((state.cleared[3]||{})[name]||0))
         :((state.cleared[phKey]||{})[name]||0);
       const pend=net>=0?net-cl:net+cl;
       html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
@@ -924,27 +934,33 @@ function renderPlayer(name){
 
   const p1=myRows.filter(r=>(r.phase||1)===1);
   const p2=myRows.filter(r=>(r.phase||1)===2);
-  let html=buildSection(p2,'Phase 2',2)+buildSection(p1,'Phase 1',1);
+  const p3=myRows.filter(r=>(r.phase||1)===3);
+  let html=buildSection(p3,'Phase 3',3)+buildSection(p2,'Phase 2',2)+buildSection(p1,'Phase 1',1);
 
   // Overall combined summary card (no repeated table — just totals)
-  if(p1.length&&p2.length){
-    let allNet=0,p1Net=0,p2Net=0,allHasResult=false;
+  const activePhases=[p1.length>0,p2.length>0,p3.length>0].filter(Boolean).length;
+  if(activePhases>1){
+    let allNet=0,p1Net=0,p2Net=0,p3Net=0,allHasResult=false;
     for(const row of myRows){
       const c=calcBet(row.ratio,row.ratio.bets[name],row.winner,name);
       if(c.net!==null){
         allNet+=c.net;allHasResult=true;
-        if((row.phase||1)===1) p1Net+=c.net; else p2Net+=c.net;
+        const ph=row.phase||1;
+        if(ph===1) p1Net+=c.net; else if(ph===2) p2Net+=c.net; else p3Net+=c.net;
       }
     }
     if(allHasResult){
       const c1=((state.cleared[1]||{})[name]||0);
       const c2=((state.cleared[2]||{})[name]||0);
-      const allCl=c1+c2;
+      const c3=((state.cleared[3]||{})[name]||0);
+      const allCl=c1+c2+c3;
       const pend1=p1Net>=0?p1Net-c1:p1Net+c1;
       const pend2=p2Net>=0?p2Net-c2:p2Net+c2;
-      const allPend=pend1+pend2;
+      const pend3=p3Net>=0?p3Net-c3:p3Net+c3;
+      const allPend=pend1+pend2+pend3;
+      const overallLabel=[p1.length&&'Phase 1',p2.length&&'Phase 2',p3.length&&'Phase 3'].filter(Boolean).join(' + ');
       html+=`<div class="card">
-        <div class="card-header" style="padding:10px 18px;"><div class="card-label">Overall (Phase 1 + Phase 2)</div></div>
+        <div class="card-header" style="padding:10px 18px;"><div class="card-label">Overall (${overallLabel})</div></div>
         <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
           <span class="s-val ${allNet>=0?'win':'loss'}" style="font-size:20px;">${allNet>=0?'+':'-'}₹${Math.abs(allNet).toFixed(2)}</span>
@@ -1072,7 +1088,7 @@ async function loadFromSheet(){
       state.pins=d.pins||{};
       state.mgrPct=d.mgrPct||1;
       state.cleared=migrateCleared(d.cleared);
-      state.currentPhase=d.currentPhase||2;
+      state.currentPhase=d.currentPhase||3;
       document.getElementById('mgr-pct').value=state.mgrPct;
     }
     rebuildPinGrid(); renderManager(); checkLimits();
