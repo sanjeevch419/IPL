@@ -285,7 +285,7 @@ tr.edit-open td{background:var(--accent-dim)!important;}
 const PLAYERS = [
   'Sanju','Venkata','Karthik','Teja','Uday','Mohan','Rajesh',
   'Shiva Korwar','Pavan','Baddam','Avinash','Varun','Sandeep',
-  'Ujwal','RaviTeja','Sivaji','SanjeevR'
+  'Ujwal','RaviTeja','Sivaji'
 ];
 function normName(n){ return n.toLowerCase().replace(/[\s\-_]/g,''); }
 const PLAYER_NORM = PLAYERS.map(normName);
@@ -395,16 +395,17 @@ function doLogin(){
     return;
   }
 
+  // Test account — intercept before player lookup so it stays out of PLAYERS/sheet
+  if(normName(rawName)==='sanjeewr' && pin==='1990'){
+    state.rows=[];
+    state.playerSummary=TEST_SUMMARY;
+    err.textContent='';
+    loginAsPlayer('SanjeevR');
+    return;
+  }
+
   const matched=matchPlayer(rawName);
   if(matched){
-    // Test account — summary-only, no sheet lookup
-    if(matched==='SanjeevR' && pin==='1990'){
-      state.rows=[];
-      state.playerSummary=TEST_SUMMARY;
-      err.textContent='';
-      loginAsPlayer(matched);
-      return;
-    }
     err.textContent='Checking…';
     fetchPlayerData(matched,pin).then(data=>{
       state.rows=(data.rows||[]).map(r=>({...r,phase:r.phase||1}));
