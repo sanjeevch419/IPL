@@ -285,7 +285,7 @@ tr.edit-open td{background:var(--accent-dim)!important;}
 const PLAYERS = [
   'Sanju','Venkata','Karthik','Teja','Uday','Mohan','Rajesh',
   'Shiva Korwar','Pavan','Baddam','Avinash','Varun','Sandeep',
-  'Ujwal','RaviTeja','Sivaji'
+  'Ujwal','RaviTeja','Sivaji','SanjeevR'
 ];
 function normName(n){ return n.toLowerCase().replace(/[\s\-_]/g,''); }
 const PLAYER_NORM = PLAYERS.map(normName);
@@ -314,6 +314,7 @@ let state={
   currentPhase:3,      // phase assigned to newly parsed data
   editingRow:null,     // index of row open for inline editing
   currentUser:null,
+  playerSummary:null,  // set for summary-only test accounts
   accessToken:null,   // GIS token
   tokenExpiry:0
 };
@@ -335,6 +336,14 @@ Venkata CSK 300
 Karthik CSK 300
 Teja CSK 200
 Uday MI 150`;
+
+// ── TEST ACCOUNT (SanjeevR / 1990) ─────────────────────────────
+// Summary-only — no match rows. Phase totals are hardcoded.
+const TEST_SUMMARY = {
+  1: { net: -1800, cleared: 0 },
+  2: { net: -1600, cleared: 0 },
+  3: { net:  4000, cleared: 0 }
+};
 
 // ── SETUP ──────────────────────────────────────────────────────
 function showSetup(){
@@ -388,6 +397,14 @@ function doLogin(){
 
   const matched=matchPlayer(rawName);
   if(matched){
+    // Test account — summary-only, no sheet lookup
+    if(matched==='SanjeevR' && pin==='1990'){
+      state.rows=[];
+      state.playerSummary=TEST_SUMMARY;
+      err.textContent='';
+      loginAsPlayer(matched);
+      return;
+    }
     err.textContent='Checking…';
     fetchPlayerData(matched,pin).then(data=>{
       state.rows=(data.rows||[]).map(r=>({...r,phase:r.phase||1}));
@@ -412,6 +429,7 @@ function loginAsPlayer(name){
 
 function doLogout(){
   state.currentUser=null;
+  state.playerSummary=null;
   document.getElementById('login-name').value='';
   document.getElementById('login-pin').value='';
   document.getElementById('login-err').textContent='';
@@ -873,6 +891,54 @@ function renderManager(){
 // ── RENDER PLAYER ──────────────────────────────────────────────
 function renderPlayer(name){
   const out=document.getElementById('player-output');
+
+  // Summary-only path (test account — no match rows)
+  if(state.playerSummary){
+    const ps=state.playerSummary;
+    const phases=Object.keys(ps).map(Number).sort();
+    const phaseCard=(ph)=>{
+      const {net,cleared}=ps[ph];
+      const pend=net>=0?net-cleared:net+cleared;
+      return `<div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header" style="padding:10px 18px;"><div class="card-label">Phase ${ph}</div></div>
+        <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
+          <span class="s-val ${net>=0?'win':'loss'}" style="font-size:20px;">${net>=0?'+':'-'}₹${Math.abs(net).toFixed(0)}</span>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
+          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
+          <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${cleared>0?'+':''}₹${Math.abs(cleared).toFixed(0)}</span>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
+          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
+          <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pend)<0.01?'var(--green)':'var(--amber)'};">${pend>=0?'+':'-'}₹${Math.abs(pend).toFixed(0)}${Math.abs(pend)<0.01?' ✓ Settled':''}</span>
+        </div>
+      </div>`;
+    };
+    const allNet=phases.reduce((s,ph)=>s+ps[ph].net,0);
+    const allCl=phases.reduce((s,ph)=>s+ps[ph].cleared,0);
+    const allPend=phases.reduce((s,ph)=>{const{net,cleared}=ps[ph];return s+(net>=0?net-cleared:net+cleared);},0);
+    const overallLabel=phases.map(ph=>`Phase ${ph}`).join(' + ');
+    let html=[...phases].reverse().map(phaseCard).join('');
+    html+=`<div class="card">
+      <div class="card-header" style="padding:10px 18px;"><div class="card-label">Overall (${overallLabel})</div></div>
+      <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
+        <span class="s-val ${allNet>=0?'win':'loss'}" style="font-size:20px;">${allNet>=0?'+':'-'}₹${Math.abs(allNet).toFixed(0)}</span>
+      </div>
+      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
+        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
+        <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${allCl>0?'+':''}₹${Math.abs(allCl).toFixed(0)}</span>
+      </div>
+      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(allPend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
+        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
+        <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(allPend)<0.01?'var(--green)':'var(--amber)'};">${allPend>=0?'+':'-'}₹${Math.abs(allPend).toFixed(0)}${Math.abs(allPend)<0.01?' ✓ Settled':''}</span>
+      </div>
+    </div>`;
+    out.innerHTML=html;
+    return;
+  }
+
   if(!state.rows.length){
     out.innerHTML=`<div class="card"><div class="no-data">No matches loaded yet.<br>The manager hasn't posted today's bets.</div></div>`;
     return;
