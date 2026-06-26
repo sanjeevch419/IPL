@@ -297,7 +297,7 @@ function matchPlayer(raw){
 
 // ── DEFAULT SCRIPT URL (baked in so players never see setup screen)
 // Manager: replace this with your Apps Script /exec URL, then push to GitHub
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGCXh32YjexQRNdDNwklX0_WjuXAg0Lredx2Y4Lc_TsxWdqdQe7VMysocO4eFcyohO5A/exec';  // ← paste your /exec URL here
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxve89IzPu_IBdTGLt0WOr_uOy80Hc4dKLhnV6agA0f8lZ92_ejR0PaRKEjQNS9YZ7z7w/exec';  // ← paste your /exec URL here
 
 // ── CONFIG ─────────────────────────────────────────────────────
 function getCfg(){
@@ -586,7 +586,7 @@ function parseMessage(raw){
 // ratio underdog LOW:HIGH
 // FAVOURITE  → win:+stake        lose:-(stake×high/low)
 // UNDERDOG   → win:+(stake×high/low)  lose:-stake
-const MGR_CUT_EXEMPT = ['Sanju','Venkata'];
+const MGR_CUT_EXEMPT = ['Sanju'];
 
 function calcBet(ratio,bet,winner,playerName=''){
   if(!winner||!bet) return {gross:null,mgr:null,net:null};
@@ -1119,10 +1119,10 @@ function buildSheetRow(row){
 }
 
 async function getLastRow(){
-  // Find how many rows are already in Sheet1
+  // Find how many rows are already in MLC
   const cfg=getCfg();
   const r=await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/Sheet1!A:A`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/MLC!A:A`,
     {headers:authHeaders()}
   );
   const j=await r.json();
@@ -1137,21 +1137,21 @@ async function saveToSheet(){
   }
   syncStatus('Saving…','loading');
   try{
-    // Save app state to APP_DATA — chunked across rows to stay under 50k/cell limit
+    // Save app state to MLC_APP_DATA — chunked across rows to stay under 50k/cell limit
     const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct,cleared:state.cleared,currentPhase:state.currentPhase});
     const CHUNK=45000;
     const chunks=[];
     for(let i=0;i<json.length;i+=CHUNK) chunks.push([json.slice(i,i+CHUNK)]);
     // Pad to 20 rows to overwrite any leftover chunks from a previous larger save
     while(chunks.length<20) chunks.push(['']);
-    await sheetsWrite(`APP_DATA!A1:A${chunks.length}`,chunks);
+    await sheetsWrite(`MLC_APP_DATA!A1:A${chunks.length}`,chunks);
 
     // Append only the NEW rows (ones not yet written)
     if(state.newRows && state.newRows.length){
       const lastRow=await getLastRow();
       const startRow=lastRow+1; // next empty row after existing data
       const sheetRows=state.newRows.map(buildSheetRow);
-      await sheetsWrite(`Sheet1!A${startRow}:AJ${startRow+sheetRows.length-1}`,sheetRows);
+      await sheetsWrite(`MLC!A${startRow}:AJ${startRow+sheetRows.length-1}`,sheetRows);
       state.newRows=null; // clear after writing
     }
     syncStatus('✓ Synced to Sheet','ok');
@@ -1163,10 +1163,10 @@ async function loadFromSheet(){
   if(!state.accessToken||Date.now()>=state.tokenExpiry) return;
   syncStatus('Loading…','loading');
   try{
-    // Load APP_DATA — reassemble chunks from column A
+    // Load MLC_APP_DATA — reassemble chunks from column A
     const cfg=getCfg();
     const ar=await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent('APP_DATA!A1:A20')}`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent('MLC_APP_DATA!A1:A20')}`,
       {headers:authHeaders()}
     );
     const aj=await ar.json();
