@@ -285,7 +285,7 @@ tr.edit-open td{background:var(--accent-dim)!important;}
 const PLAYERS = [
   'Sanju','Venkata','Karthik','Teja','Uday','Mohan','Rajesh',
   'Shiva Korwar','Pavan','Baddam','Avinash','Varun','Sandeep',
-  'Ujwal','RaviTeja','Sivaji'
+  'Ujwal','RaviTeja','Sivaji','Harish'
 ];
 function normName(n){ return n.toLowerCase().replace(/[\s\-_]/g,''); }
 const PLAYER_NORM = PLAYERS.map(normName);
@@ -1066,7 +1066,7 @@ async function saveToSheet(){
       const lastRow=await getLastRow();
       const startRow=lastRow+1; // next empty row after existing data
       const sheetRows=state.newRows.map(buildSheetRow);
-      await sheetsWrite(`${ACTIVE_LEAGUE}!A${startRow}:AJ${startRow+sheetRows.length-1}`,sheetRows);
+      await sheetsWrite(`${ACTIVE_LEAGUE}!A${startRow}:AL${startRow+sheetRows.length-1}`,sheetRows);
       state.newRows=null; // clear after writing
     }
     syncStatus('✓ Synced to Sheet','ok');
