@@ -297,7 +297,9 @@ function matchPlayer(raw){
 
 // ── DEFAULT SCRIPT URL (baked in so players never see setup screen)
 // Manager: replace this with your Apps Script /exec URL, then push to GitHub
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxve89IzPu_IBdTGLt0WOr_uOy80Hc4dKLhnV6agA0f8lZ92_ejR0PaRKEjQNS9YZ7z7w/exec';  // ← paste your /exec URL here
+const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxve89IzPu_IBdTGLt0WOr_uOy80Hc4dKLhnV6agA0f8lZ92_ejR0PaRKEjQNS9YZ7z7w/exec';
+const ACTIVE_LEAGUE = '100';
+const PLAYER_PHASE = 5;  // ← paste your /exec URL here
 
 // ── CONFIG ─────────────────────────────────────────────────────
 function getCfg(){
@@ -310,8 +312,8 @@ function getScriptUrl(){ return DEFAULT_SCRIPT_URL || getCfg().scriptUrl; }
 // ── STATE ──────────────────────────────────────────────────────
 let state={
   rows:[], newRows:null, pins:{}, mgrPct:1,
-  cleared:{1:{},2:{},3:{},4:{}}, // { phase: { playerName: amountCleared } }
-  currentPhase:4,      // phase assigned to newly parsed data
+  cleared:{1:{},2:{},3:{},4:{},5:{}}, // { phase: { playerName: amountCleared } }
+  currentPhase:5,      // phase assigned to newly parsed data
   editingRow:null,     // index of row open for inline editing
   currentUser:null,
   playerSummary:null,  // set for summary-only test accounts
@@ -534,7 +536,7 @@ function mgr_parse(){
       imbalances.push(`${row.match} R${row.ratio.roundNum}: sum = ${grossSum>=0?'+':''}${grossSum.toFixed(2)}`);
   }
   if(imbalances.length){err.textContent='Book not balanced — '+imbalances.join('; ');return;}
-  result.rows.forEach(r=>r.phase=state.currentPhase);
+  result.rows.forEach(r=>r.phase=PLAYER_PHASE);
   state.newRows=result.rows;
   state.rows=[...state.rows,...result.rows];
   rebuildPinGrid();
@@ -772,13 +774,13 @@ function renderManager(){
     <button class="btn sm${state.currentPhase===1?' accent':''}" onclick="setPhase(1)">Phase 1</button>
     <button class="btn sm${state.currentPhase===2?' accent':''}" onclick="setPhase(2)">Phase 2</button>
     <button class="btn sm${state.currentPhase===3?' accent':''}" onclick="setPhase(3)">Phase 3</button>
-    <button class="btn sm${state.currentPhase===4?' accent':''}" onclick="setPhase(4)">Phase 4</button>
+    <button class="btn sm${state.currentPhase===5?' accent':''}" onclick="setPhase(5)">Phase 5</button>
   </div>`;
 
   // Build per-phase and overall totals
   const mk=()=>{const t={};for(const p of PLAYERS)t[p]={stake:0,gross:0,mgr:0,net:0,bets:0};return t;};
-  const totals={1:mk(),2:mk(),3:mk(),4:mk(),all:mk()};
-  const mgrTot={1:0,2:0,3:0,4:0,all:0};
+  const totals={1:mk(),2:mk(),3:mk(),4:mk(),5:mk(),all:mk()};
+  const mgrTot={1:0,2:0,3:0,4:0,5:0,all:0};
 
   for(const row of state.rows){
     const ph=row.phase||1;
@@ -884,10 +886,12 @@ function renderManager(){
   const hasP2=PLAYERS.some(p=>totals[2][p].bets>0);
   const hasP3=PLAYERS.some(p=>totals[3][p].bets>0);
   const hasP4=PLAYERS.some(p=>totals[4][p].bets>0);
-  const multiPhase=[hasP1,hasP2,hasP3,hasP4].filter(Boolean).length>1;
-  const overallLabel=[hasP1&&'Phase 1',hasP2&&'Phase 2',hasP3&&'Phase 3',hasP4&&'Phase 4'].filter(Boolean).join(' + ');
+  const hasP5=PLAYERS.some(p=>totals[5][p].bets>0);
+  const multiPhase=[hasP1,hasP2,hasP3,hasP4,hasP5].filter(Boolean).length>1;
+  const overallLabel=[hasP1&&'Phase 1',hasP2&&'Phase 2',hasP3&&'Phase 3',hasP4&&'Phase 4',hasP5&&'Phase 5'].filter(Boolean).join(' + ');
   const summaryHtml=
     (multiPhase?buildTable('all',`Overall (${overallLabel})`):'')
+    +(hasP5?buildTable(5,'Phase 5'):'')
     +(hasP4?buildTable(4,'Phase 4'):'')
     +(hasP3?buildTable(3,'Phase 3'):'')
     +(hasP2?buildTable(2,'Phase 2'):'')
@@ -900,160 +904,71 @@ function renderManager(){
 function renderPlayer(name){
   const out=document.getElementById('player-output');
 
-  // Summary-only path (test account — no match rows)
+  // Players can see only League 100 / Phase 5.
   if(state.playerSummary){
-    const ps=state.playerSummary;
-    const phases=Object.keys(ps).map(Number).sort();
-    const phaseCard=(ph)=>{
-      const {net,cleared}=ps[ph];
-      const pend=net>=0?net-cleared:net+cleared;
-      return `<div class="card" style="margin-bottom:1.25rem;">
-        <div class="card-header" style="padding:10px 18px;"><div class="card-label">Phase ${ph}</div></div>
-        <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
-          <span class="s-val ${net>=0?'win':'loss'}" style="font-size:20px;">${net>=0?'+':'-'}₹${Math.abs(net).toFixed(0)}</span>
-        </div>
-        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
-          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
-          <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${cleared>0?'+':''}₹${Math.abs(cleared).toFixed(0)}</span>
-        </div>
-        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
-          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
-          <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pend)<0.01?'var(--green)':'var(--amber)'};">${pend>=0?'+':'-'}₹${Math.abs(pend).toFixed(0)}${Math.abs(pend)<0.01?' ✓ Settled':''}</span>
-        </div>
-      </div>`;
-    };
-    const allNet=phases.reduce((s,ph)=>s+ps[ph].net,0);
-    const allCl=phases.reduce((s,ph)=>s+ps[ph].cleared,0);
-    const allPend=phases.reduce((s,ph)=>{const{net,cleared}=ps[ph];return s+(net>=0?net-cleared:net+cleared);},0);
-    const overallLabel=phases.map(ph=>`Phase ${ph}`).join(' + ');
-    let html=[...phases].reverse().map(phaseCard).join('');
-    html+=`<div class="card">
-      <div class="card-header" style="padding:10px 18px;"><div class="card-label">Overall (${overallLabel})</div></div>
-      <div style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
-        <span class="s-val ${allNet>=0?'win':'loss'}" style="font-size:20px;">${allNet>=0?'+':'-'}₹${Math.abs(allNet).toFixed(0)}</span>
-      </div>
-      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
-        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
-        <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${allCl>0?'+':''}₹${Math.abs(allCl).toFixed(0)}</span>
-      </div>
-      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(allPend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
-        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
-        <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(allPend)<0.01?'var(--green)':'var(--amber)'};">${allPend>=0?'+':'-'}₹${Math.abs(allPend).toFixed(0)}${Math.abs(allPend)<0.01?' ✓ Settled':''}</span>
-      </div>
-    </div>`;
-    out.innerHTML=html;
+    out.innerHTML='';
     return;
   }
 
-  if(!state.rows.length){
-    out.innerHTML=`<div class="card"><div class="no-data">No matches loaded yet.<br>The manager hasn't posted today's bets.</div></div>`;
-    return;
-  }
-  const myRows=state.rows.filter(r=>r.ratio.bets[name]);
+  const myRows=state.rows.filter(r=>
+    (r.phase||1)===PLAYER_PHASE &&
+    r.ratio &&
+    r.ratio.bets &&
+    r.ratio.bets[name]
+  );
+
   if(!myRows.length){
-    out.innerHTML=`<div class="card"><div class="no-data">No bets found for ${name} yet.</div></div>`;
+    out.innerHTML=`<div class="card"><div class="no-data">No Phase 5 bets found for ${name} yet.</div></div>`;
     return;
   }
 
-  // Build a section (match table + summary footer) for a set of rows
-  const buildSection=(rows,label,phKey)=>{
-    if(!rows.length) return '';
-    let net=0,hasResult=false;
-    const sorted=[...rows].reverse();
-    let html=`<div class="card" style="margin-bottom:1.25rem;">
-      <div class="card-header" style="padding:10px 18px;"><div class="card-label">${label}</div></div>
-      <div style="overflow-x:auto;"><table>
-        <thead><tr>
-          <th>Date</th><th>Match</th><th>Winner</th><th>Ratio</th>
-          <th>Backed</th><th>Stake</th><th>Gross P&amp;L</th><th>Your Net</th>
-        </tr></thead><tbody>`;
-    for(const row of sorted){
-      const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
-      const c=calcBet(ratio,bet,winner,name);
-      if(c.net!==null){net+=c.net;hasResult=true;}
-      html+=`<tr class="my-row">
-        <td style="font-family:var(--mono);white-space:nowrap;font-size:12px">${row.date}</td>
-        <td style="font-weight:500;white-space:nowrap">${row.match}</td>
-        <td>${winner?`<span class="winner-tag">✓ ${winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
-        <td><span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span></td>
-        <td style="font-family:var(--mono)">${bet.team}</td>
-        <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
-        <td>${fmtPL(c.gross)}</td><td>${fmtPL(c.net)}</td>
-      </tr>`;
-    }
-    html+=`</tbody></table></div>`;
-    if(hasResult){
-      const cl=phKey==='all'
-        ?(((state.cleared[1]||{})[name]||0)+((state.cleared[2]||{})[name]||0)+((state.cleared[3]||{})[name]||0)+((state.cleared[4]||{})[name]||0))
-        :((state.cleared[phKey]||{})[name]||0);
-      const pend=net>=0?net-cl:net+cl;
-      html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
-        <span class="s-val ${net>=0?'win':'loss'}" style="font-size:20px;">${net>=0?'+':'-'}₹${Math.abs(net).toFixed(2)}</span>
-      </div>
-      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
-        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
-        <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${cl>0?'+':''}₹${Math.abs(cl).toFixed(2)}</span>
-      </div>
-      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
-        <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
-        <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pend)<0.01?'var(--green)':'var(--amber)'};">${pend>=0?'+':'-'}₹${Math.abs(pend).toFixed(2)}${Math.abs(pend)<0.01?' ✓ Settled':''}</span>
-      </div>`;
-    }
-    html+=`</div>`;
-    return html;
-  };
+  let net=0,hasResult=false;
+  const sorted=[...myRows].reverse();
+  let html=`<div class="card" style="margin-bottom:1.25rem;">
+    <div class="card-header" style="padding:10px 18px;">
+      <div class="card-label">League ${ACTIVE_LEAGUE} · Phase 5</div>
+    </div>
+    <div style="overflow-x:auto;"><table>
+      <thead><tr>
+        <th>Date</th><th>Match</th><th>Winner</th><th>Ratio</th>
+        <th>Backed</th><th>Stake</th><th>Gross P&amp;L</th><th>Your Net</th>
+      </tr></thead><tbody>`;
 
-  const p1=myRows.filter(r=>(r.phase||1)===1);
-  const p2=myRows.filter(r=>(r.phase||1)===2);
-  const p3=myRows.filter(r=>(r.phase||1)===3);
-  const p4=myRows.filter(r=>(r.phase||1)===4);
-  let html=buildSection(p4,'Phase 4',4)+buildSection(p3,'Phase 3',3)+buildSection(p2,'Phase 2',2)+buildSection(p1,'Phase 1',1);
-
-  // Overall combined summary card (no repeated table — just totals)
-  const activePhases=[p1.length>0,p2.length>0,p3.length>0,p4.length>0].filter(Boolean).length;
-  if(activePhases>1){
-    let allNet=0,p1Net=0,p2Net=0,p3Net=0,p4Net=0,allHasResult=false;
-    for(const row of myRows){
-      const c=calcBet(row.ratio,row.ratio.bets[name],row.winner,name);
-      if(c.net!==null){
-        allNet+=c.net;allHasResult=true;
-        const ph=row.phase||1;
-        if(ph===1) p1Net+=c.net; else if(ph===2) p2Net+=c.net; else if(ph===3) p3Net+=c.net; else p4Net+=c.net;
-      }
-    }
-    if(allHasResult){
-      const c1=((state.cleared[1]||{})[name]||0);
-      const c2=((state.cleared[2]||{})[name]||0);
-      const c3=((state.cleared[3]||{})[name]||0);
-      const c4=((state.cleared[4]||{})[name]||0);
-      const allCl=c1+c2+c3+c4;
-      const pend1=p1Net>=0?p1Net-c1:p1Net+c1;
-      const pend2=p2Net>=0?p2Net-c2:p2Net+c2;
-      const pend3=p3Net>=0?p3Net-c3:p3Net+c3;
-      const pend4=p4Net>=0?p4Net-c4:p4Net+c4;
-      const allPend=pend1+pend2+pend3+pend4;
-      const overallLabel=[p1.length&&'Phase 1',p2.length&&'Phase 2',p3.length&&'Phase 3',p4.length&&'Phase 4'].filter(Boolean).join(' + ');
-      html+=`<div class="card">
-        <div class="card-header" style="padding:10px 18px;"><div class="card-label">Overall (${overallLabel})</div></div>
-        <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Net P&amp;L</span>
-          <span class="s-val ${allNet>=0?'win':'loss'}" style="font-size:20px;">${allNet>=0?'+':'-'}₹${Math.abs(allNet).toFixed(2)}</span>
-        </div>
-        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
-          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
-          <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${allCl>0?'+':''}₹${Math.abs(allCl).toFixed(2)}</span>
-        </div>
-        <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(allPend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
-          <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
-          <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(allPend)<0.01?'var(--green)':'var(--amber)'};">${allPend>=0?'+':'-'}₹${Math.abs(allPend).toFixed(2)}${Math.abs(allPend)<0.01?' ✓ Settled':''}</span>
-        </div>
-      </div>`;
-    }
+  for(const row of sorted){
+    const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
+    const c=calcBet(ratio,bet,winner,name);
+    if(c.net!==null){net+=c.net;hasResult=true;}
+    html+=`<tr class="my-row">
+      <td style="font-family:var(--mono);white-space:nowrap;font-size:12px">${row.date}</td>
+      <td style="font-weight:500;white-space:nowrap">${row.match}</td>
+      <td>${winner?`<span class="winner-tag">✓ ${winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
+      <td><span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span></td>
+      <td style="font-family:var(--mono)">${bet.team}</td>
+      <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
+      <td>${fmtPL(c.gross)}</td><td>${fmtPL(c.net)}</td>
+    </tr>`;
   }
 
+  html+=`</tbody></table></div>`;
+
+  if(hasResult){
+    const cl=(state.cleared[PLAYER_PHASE]||{})[name]||0;
+    const pend=net>=0?net-cl:net+cl;
+    html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Phase 5 Net P&amp;L</span>
+      <span class="s-val ${net>=0?'win':'loss'}" style="font-size:20px;">${net>=0?'+':'-'}₹${Math.abs(net).toFixed(2)}</span>
+    </div>
+    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
+      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
+      <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${cl>0?'+':''}₹${Math.abs(cl).toFixed(2)}</span>
+    </div>
+    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
+      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
+      <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pend)<0.01?'var(--green)':'var(--amber)'};">${pend>=0?'+':'-'}₹${Math.abs(pend).toFixed(2)}${Math.abs(pend)<0.01?' ✓ Settled':''}</span>
+    </div>`;
+  }
+
+  html+=`</div>`;
   out.innerHTML=html;
 }
 
@@ -1084,7 +999,7 @@ async function sheetsRead(range){
 async function fetchPlayerData(name,pin){
   const scriptUrl=getScriptUrl();
   if(!scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
-  const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
+  const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}&league=${encodeURIComponent(ACTIVE_LEAGUE)}&phase=${PLAYER_PHASE}`;
   const r=await fetch(url);
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||'Login failed');
@@ -1122,7 +1037,7 @@ async function getLastRow(){
   // Find how many rows are already in MLC
   const cfg=getCfg();
   const r=await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/MLC!A:A`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(ACTIVE_LEAGUE+'!A:A')}`,
     {headers:authHeaders()}
   );
   const j=await r.json();
@@ -1151,7 +1066,7 @@ async function saveToSheet(){
       const lastRow=await getLastRow();
       const startRow=lastRow+1; // next empty row after existing data
       const sheetRows=state.newRows.map(buildSheetRow);
-      await sheetsWrite(`MLC!A${startRow}:AJ${startRow+sheetRows.length-1}`,sheetRows);
+      await sheetsWrite(`${ACTIVE_LEAGUE}!A${startRow}:AJ${startRow+sheetRows.length-1}`,sheetRows);
       state.newRows=null; // clear after writing
     }
     syncStatus('✓ Synced to Sheet','ok');
