@@ -99,6 +99,9 @@ tr:hover td{background:var(--accent-dim2);}
 .val-mgr{color:var(--amber);font-family:var(--mono);}
 .val-n{color:var(--text3);font-family:var(--mono);}
 .summary-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:1rem;}
+.phase-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.phase-tabs .btn{flex:1;min-width:72px;justify-content:center;text-align:center;}
+.phase-tabs .btn.tab-empty{opacity:.35;cursor:not-allowed;}
 .s-tile{flex:1;min-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
 .s-label{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;}
 .s-val{font-size:22px;font-weight:600;font-family:var(--mono);}
@@ -319,6 +322,7 @@ let state={
   currentPhase:5,      // 4=MLC, 5=100, 6=CPL — assigned to newly parsed data
   editingRow:null,     // index of row open for inline editing
   currentUser:null,
+  playerTabPhase:5,    // player view: 4=MLC, 5=100, 6=CPL
   playerSummary:null,  // set for summary-only test accounts
   accessToken:null,   // GIS token
   tokenExpiry:0
@@ -959,6 +963,11 @@ function buildPlayerPhaseCard(name,phase,label){
   return html;
 }
 
+function setPlayerTab(ph){
+  state.playerTabPhase=ph;
+  renderPlayer(state.currentUser);
+}
+
 function renderPlayer(name){
   const out=document.getElementById('player-output');
 
@@ -967,12 +976,31 @@ function renderPlayer(name){
     return;
   }
 
-  const html=PLAYER_PHASES.map(ph=>buildPlayerPhaseCard(name,ph,phaseLabel(ph))).join('');
-  if(!html){
+  const hasPhaseBets=ph=>state.rows.some(r=>
+    (r.phase||1)===ph && r.ratio && r.ratio.bets && r.ratio.bets[name]
+  );
+  const phasesWithData=PLAYER_PHASES.filter(hasPhaseBets);
+
+  if(!phasesWithData.length){
     out.innerHTML=`<div class="card"><div class="no-data">No MLC, 100, or CPL bets found for ${name} yet.</div></div>`;
     return;
   }
-  out.innerHTML=html;
+
+  if(!phasesWithData.includes(state.playerTabPhase)){
+    state.playerTabPhase=phasesWithData[0];
+  }
+
+  const tabsHtml=`<div class="phase-tabs">${
+    PLAYER_PHASES.map(ph=>{
+      const has=hasPhaseBets(ph);
+      const active=state.playerTabPhase===ph;
+      return `<button type="button" class="btn sm${active?' accent':''}${has?'':' tab-empty'}"${
+        has?` onclick="setPlayerTab(${ph})"`:''}>${phaseLabel(ph)}</button>`;
+    }).join('')
+  }</div>`;
+
+  const cardHtml=buildPlayerPhaseCard(name,state.playerTabPhase,phaseLabel(state.playerTabPhase));
+  out.innerHTML=tabsHtml+cardHtml;
 }
 
 // ── SHEETS API ─────────────────────────────────────────────────
