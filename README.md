@@ -20,7 +20,7 @@ function doGet(e) {
       return respond({ ok: false, error: 'Incorrect name or PIN. Contact the manager.' });
     }
 
-    const playerRows = (data.rows || []).map(row => {
+    const playerRows = (data.rows || []).map(function(row) {
       const bet = row.ratio && row.ratio.bets && row.ratio.bets[name];
       if (!bet) return null;
       return {
@@ -40,12 +40,10 @@ function doGet(e) {
     }).filter(Boolean);
 
     const rawCleared = data.cleared || {};
-    const cleared = {
-      1: { [name]: ((rawCleared[1] || {})[name] || 0) },
-      2: { [name]: ((rawCleared[2] || {})[name] || 0) },
-      3: { [name]: ((rawCleared[3] || {})[name] || 0) },
-      4: { [name]: ((rawCleared[4] || {})[name] || 0) }
-    };
+    const cleared = {};
+    [1, 2, 3, 4, 5, 6].forEach(function(ph) {
+      cleared[ph] = { [name]: ((rawCleared[ph] || {})[name] || 0) };
+    });
 
     return respond({
       ok:      true,
