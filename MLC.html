@@ -298,8 +298,11 @@ function matchPlayer(raw){
 // ── DEFAULT SCRIPT URL (baked in so players never see setup screen)
 // Manager: replace this with your Apps Script /exec URL, then push to GitHub
 const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxve89IzPu_IBdTGLt0WOr_uOy80Hc4dKLhnV6agA0f8lZ92_ejR0PaRKEjQNS9YZ7z7w/exec';
-const ACTIVE_LEAGUE = '100';
-const PLAYER_PHASE = 5;  // ← paste your /exec URL here
+const PHASE_NAMES = {4:'MLC',5:'100',6:'CPL'};
+const PHASE_SHEET = {4:'MLC',5:'100',6:'CPL'};
+const PLAYER_PHASES = [4,5,6];
+function phaseLabel(ph){ return PHASE_NAMES[ph]||('Phase '+ph); }
+function sheetForPhase(ph){ return PHASE_SHEET[ph]||'100'; }
 
 // ── CONFIG ─────────────────────────────────────────────────────
 function getCfg(){
@@ -312,8 +315,8 @@ function getScriptUrl(){ return DEFAULT_SCRIPT_URL || getCfg().scriptUrl; }
 // ── STATE ──────────────────────────────────────────────────────
 let state={
   rows:[], newRows:null, pins:{}, mgrPct:1,
-  cleared:{1:{},2:{},3:{},4:{},5:{}}, // { phase: { playerName: amountCleared } }
-  currentPhase:5,      // phase assigned to newly parsed data
+  cleared:{1:{},2:{},3:{},4:{},5:{},6:{}}, // { phase: { playerName: amountCleared } }
+  currentPhase:5,      // 4=MLC, 5=100, 6=CPL — assigned to newly parsed data
   editingRow:null,     // index of row open for inline editing
   currentUser:null,
   playerSummary:null,  // set for summary-only test accounts
@@ -536,7 +539,7 @@ function mgr_parse(){
       imbalances.push(`${row.match} R${row.ratio.roundNum}: sum = ${grossSum>=0?'+':''}${grossSum.toFixed(2)}`);
   }
   if(imbalances.length){err.textContent='Book not balanced — '+imbalances.join('; ');return;}
-  result.rows.forEach(r=>r.phase=PLAYER_PHASE);
+  result.rows.forEach(r=>r.phase=state.currentPhase);
   state.newRows=result.rows;
   state.rows=[...state.rows,...result.rows];
   rebuildPinGrid();
@@ -717,9 +720,11 @@ function buildEditForm(i){
 
 // ── PHASE / CLEARED ────────────────────────────────────────────
 function migrateCleared(c){
-  if(!c||typeof c!=='object') return {1:{},2:{},3:{},4:{}};
-  if('1' in c||'2' in c||'3' in c||'4' in c) return {1:c[1]||{},2:c[2]||{},3:c[3]||{},4:c[4]||{}};
-  return {1:c,2:{},3:{},4:{}}; // old flat format → assign to phase 1
+  const empty=()=>({1:{},2:{},3:{},4:{},5:{},6:{}});
+  if(!c||typeof c!=='object') return empty();
+  if('1' in c||'2' in c||'3' in c||'4' in c||'5' in c||'6' in c)
+    return {1:c[1]||{},2:c[2]||{},3:c[3]||{},4:c[4]||{},5:c[5]||{},6:c[6]||{}};
+  return {1:c,2:{},3:{},4:{},5:{},6:{}}; // old flat format → assign to phase 1
 }
 
 function setPhase(ph){
@@ -740,23 +745,20 @@ function checkLimits(){
   const LIMIT=2500;
   const breached=[];
   for(const p of PLAYERS){
-    let p1Net=0,p2Net=0,p3Net=0,p4Net=0;
+    const phaseNet={1:0,2:0,3:0,4:0,5:0,6:0};
     for(const row of state.rows){
       const bet=row.ratio.bets[p]; if(!bet) continue;
       const c=calcBet(row.ratio,bet,row.winner,p);
       if(c.net===null) continue;
       const ph=row.phase||1;
-      if(ph===1) p1Net+=c.net; else if(ph===2) p2Net+=c.net; else if(ph===3) p3Net+=c.net; else p4Net+=c.net;
+      if(phaseNet[ph]!==undefined) phaseNet[ph]+=c.net;
     }
-    const c1=(state.cleared[1]||{})[p]||0;
-    const c2=(state.cleared[2]||{})[p]||0;
-    const c3=(state.cleared[3]||{})[p]||0;
-    const c4=(state.cleared[4]||{})[p]||0;
-    const pend1=p1Net>=0?p1Net-c1:p1Net+c1;
-    const pend2=p2Net>=0?p2Net-c2:p2Net+c2;
-    const pend3=p3Net>=0?p3Net-c3:p3Net+c3;
-    const pend4=p4Net>=0?p4Net-c4:p4Net+c4;
-    const overallPending=pend1+pend2+pend3+pend4;
+    let overallPending=0;
+    for(const ph of [1,2,3,4,5,6]){
+      const net=phaseNet[ph];
+      const cl=(state.cleared[ph]||{})[p]||0;
+      overallPending+=net>=0?net-cl:net+cl;
+    }
     if(overallPending<-LIMIT) breached.push(`${p} (₹${Math.abs(overallPending).toFixed(0)})`);
   }
   if(breached.length){
@@ -771,16 +773,15 @@ function renderManager(){
   // Phase selector
   const phaseHtml=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
     <span style="font-size:12px;color:var(--text2);font-family:var(--mono);">New data → </span>
-    <button class="btn sm${state.currentPhase===1?' accent':''}" onclick="setPhase(1)">Phase 1</button>
-    <button class="btn sm${state.currentPhase===2?' accent':''}" onclick="setPhase(2)">Phase 2</button>
-    <button class="btn sm${state.currentPhase===3?' accent':''}" onclick="setPhase(3)">Phase 3</button>
-    <button class="btn sm${state.currentPhase===5?' accent':''}" onclick="setPhase(5)">Phase 5</button>
+    <button class="btn sm${state.currentPhase===4?' accent':''}" onclick="setPhase(4)">MLC</button>
+    <button class="btn sm${state.currentPhase===5?' accent':''}" onclick="setPhase(5)">100</button>
+    <button class="btn sm${state.currentPhase===6?' accent':''}" onclick="setPhase(6)">CPL</button>
   </div>`;
 
   // Build per-phase and overall totals
   const mk=()=>{const t={};for(const p of PLAYERS)t[p]={stake:0,gross:0,mgr:0,net:0,bets:0};return t;};
-  const totals={1:mk(),2:mk(),3:mk(),4:mk(),5:mk(),all:mk()};
-  const mgrTot={1:0,2:0,3:0,4:0,5:0,all:0};
+  const totals={1:mk(),2:mk(),3:mk(),4:mk(),5:mk(),6:mk(),all:mk()};
+  const mgrTot={1:0,2:0,3:0,4:0,5:0,6:0,all:0};
 
   for(const row of state.rows){
     const ph=row.phase||1;
@@ -812,7 +813,7 @@ function renderManager(){
       <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${row.date}</td>
       <td style="white-space:nowrap">${row.match}</td>
       <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${ratio.underdog} ${ratio.low}:${ratio.high} · R${ratio.roundNum}</td>
-      <td><span class="${ph===2?'ratio-tag':'round-tag'}">P${ph}</span></td>
+      <td><span class="${ph===5?'ratio-tag':'round-tag'}">${phaseLabel(ph)}</span></td>
       <td>${row.winner?`<span class="winner-tag">✓ ${row.winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
       <td style="white-space:nowrap;">
         <button class="btn sm" style="font-size:11px;margin-right:4px;" onclick="openEdit(${i})">Edit</button>
@@ -841,20 +842,16 @@ function renderManager(){
         </tr></thead><tbody>`;
     for(const p of active){
       const pt=t[p];
-      const c1=(state.cleared[1]||{})[p]||0;
-      const c2=(state.cleared[2]||{})[p]||0;
-      const c3=(state.cleared[3]||{})[p]||0;
-      const c4=(state.cleared[4]||{})[p]||0;
-      const cleared=isAll?c1+c2+c3+c4:((state.cleared[phKey]||{})[p]||0);
-      let pending;
+      let cleared=0,pending=0;
       if(isAll){
-        const n1=totals[1][p].net, n2=totals[2][p].net, n3=totals[3][p].net, n4=totals[4][p].net;
-        const pend1=n1>=0?n1-c1:n1+c1;
-        const pend2=n2>=0?n2-c2:n2+c2;
-        const pend3=n3>=0?n3-c3:n3+c3;
-        const pend4=n4>=0?n4-c4:n4+c4;
-        pending=pend1+pend2+pend3+pend4;
+        for(const ph of [1,2,3,4,5,6]){
+          const cl=(state.cleared[ph]||{})[p]||0;
+          cleared+=cl;
+          const n=totals[ph][p].net;
+          pending+=n>=0?n-cl:n+cl;
+        }
       } else {
+        cleared=(state.cleared[phKey]||{})[p]||0;
         pending=pt.net>=0?pt.net-cleared:pt.net+cleared;
       }
       const clearedCell=isAll
@@ -887,12 +884,14 @@ function renderManager(){
   const hasP3=PLAYERS.some(p=>totals[3][p].bets>0);
   const hasP4=PLAYERS.some(p=>totals[4][p].bets>0);
   const hasP5=PLAYERS.some(p=>totals[5][p].bets>0);
-  const multiPhase=[hasP1,hasP2,hasP3,hasP4,hasP5].filter(Boolean).length>1;
-  const overallLabel=[hasP1&&'Phase 1',hasP2&&'Phase 2',hasP3&&'Phase 3',hasP4&&'Phase 4',hasP5&&'Phase 5'].filter(Boolean).join(' + ');
+  const hasP6=PLAYERS.some(p=>totals[6][p].bets>0);
+  const multiPhase=[hasP1,hasP2,hasP3,hasP4,hasP5,hasP6].filter(Boolean).length>1;
+  const overallLabel=[hasP1&&'Phase 1',hasP2&&'Phase 2',hasP3&&'Phase 3',hasP4&&'MLC',hasP5&&'100',hasP6&&'CPL'].filter(Boolean).join(' + ');
   const summaryHtml=
     (multiPhase?buildTable('all',`Overall (${overallLabel})`):'')
-    +(hasP5?buildTable(5,'Phase 5'):'')
-    +(hasP4?buildTable(4,'Phase 4'):'')
+    +(hasP6?buildTable(6,'CPL'):'')
+    +(hasP5?buildTable(5,'100'):'')
+    +(hasP4?buildTable(4,'MLC'):'')
     +(hasP3?buildTable(3,'Phase 3'):'')
     +(hasP2?buildTable(2,'Phase 2'):'')
     +(hasP1?buildTable(1,'Phase 1'):'');
@@ -901,32 +900,20 @@ function renderManager(){
 }
 
 // ── RENDER PLAYER ──────────────────────────────────────────────
-function renderPlayer(name){
-  const out=document.getElementById('player-output');
-
-  // Players can see only League 100 / Phase 5.
-  if(state.playerSummary){
-    out.innerHTML='';
-    return;
-  }
-
+function buildPlayerPhaseCard(name,phase,label){
   const myRows=state.rows.filter(r=>
-    (r.phase||1)===PLAYER_PHASE &&
+    (r.phase||1)===phase &&
     r.ratio &&
     r.ratio.bets &&
     r.ratio.bets[name]
   );
-
-  if(!myRows.length){
-    out.innerHTML=`<div class="card"><div class="no-data">No Phase 5 bets found for ${name} yet.</div></div>`;
-    return;
-  }
+  if(!myRows.length) return '';
 
   let net=0,hasResult=false;
   const sorted=[...myRows].reverse();
   let html=`<div class="card" style="margin-bottom:1.25rem;">
     <div class="card-header" style="padding:10px 18px;">
-      <div class="card-label">League ${ACTIVE_LEAGUE} · Phase 5</div>
+      <div class="card-label">${label}</div>
     </div>
     <div style="overflow-x:auto;"><table>
       <thead><tr>
@@ -952,10 +939,10 @@ function renderPlayer(name){
   html+=`</tbody></table></div>`;
 
   if(hasResult){
-    const cl=(state.cleared[PLAYER_PHASE]||{})[name]||0;
+    const cl=(state.cleared[phase]||{})[name]||0;
     const pend=net>=0?net-cl:net+cl;
     html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Phase 5 Net P&amp;L</span>
+      <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">${label} Net P&amp;L</span>
       <span class="s-val ${net>=0?'win':'loss'}" style="font-size:20px;">${net>=0?'+':'-'}₹${Math.abs(net).toFixed(2)}</span>
     </div>
     <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
@@ -969,6 +956,22 @@ function renderPlayer(name){
   }
 
   html+=`</div>`;
+  return html;
+}
+
+function renderPlayer(name){
+  const out=document.getElementById('player-output');
+
+  if(state.playerSummary){
+    out.innerHTML='';
+    return;
+  }
+
+  const html=PLAYER_PHASES.map(ph=>buildPlayerPhaseCard(name,ph,phaseLabel(ph))).join('');
+  if(!html){
+    out.innerHTML=`<div class="card"><div class="no-data">No MLC, 100, or CPL bets found for ${name} yet.</div></div>`;
+    return;
+  }
   out.innerHTML=html;
 }
 
@@ -999,11 +1002,16 @@ async function sheetsRead(range){
 async function fetchPlayerData(name,pin){
   const scriptUrl=getScriptUrl();
   if(!scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
-  const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}&league=${encodeURIComponent(ACTIVE_LEAGUE)}&phase=${PLAYER_PHASE}`;
-  const r=await fetch(url);
-  const j=await r.json();
-  if(!j.ok) throw new Error(j.error||'Login failed');
-  return j; // {ok, rows, mgrPct}
+  const results=await Promise.all(PLAYER_PHASES.map(async ph=>{
+    const league=sheetForPhase(ph);
+    const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}&league=${encodeURIComponent(league)}&phase=${ph}`;
+    const r=await fetch(url);
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.error||'Login failed');
+    return {...j, phase:ph};
+  }));
+  const rows=results.flatMap(r=>(r.rows||[]).map(row=>({...row,phase:row.phase||r.phase})));
+  return {ok:true,rows,mgrPct:results[0].mgrPct,cleared:results[0].cleared};
 }
 
 async function sheetsWrite(range,values){
@@ -1033,11 +1041,10 @@ function buildSheetRow(row){
   return [dateStr,fixtureStr,ratioStr,...betCols,mgrTotal>0?parseFloat(mgrTotal.toFixed(2)):"",...netCols];
 }
 
-async function getLastRow(){
-  // Find how many rows are already in MLC
+async function getLastRow(sheetTab){
   const cfg=getCfg();
   const r=await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(ACTIVE_LEAGUE+'!A:A')}`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(sheetTab+'!A:A')}`,
     {headers:authHeaders()}
   );
   const j=await r.json();
@@ -1063,11 +1070,13 @@ async function saveToSheet(){
 
     // Append only the NEW rows (ones not yet written)
     if(state.newRows && state.newRows.length){
-      const lastRow=await getLastRow();
-      const startRow=lastRow+1; // next empty row after existing data
+      const ph=state.newRows[0].phase||state.currentPhase;
+      const sheetTab=sheetForPhase(ph);
+      const lastRow=await getLastRow(sheetTab);
+      const startRow=lastRow+1;
       const sheetRows=state.newRows.map(buildSheetRow);
-      await sheetsWrite(`${ACTIVE_LEAGUE}!A${startRow}:AL${startRow+sheetRows.length-1}`,sheetRows);
-      state.newRows=null; // clear after writing
+      await sheetsWrite(`${sheetTab}!A${startRow}:AL${startRow+sheetRows.length-1}`,sheetRows);
+      state.newRows=null;
     }
     syncStatus('✓ Synced to Sheet','ok');
     setTimeout(()=>syncStatus(''),3000);
@@ -1093,7 +1102,7 @@ async function loadFromSheet(){
       state.pins=d.pins||{};
       state.mgrPct=d.mgrPct||1;
       state.cleared=migrateCleared(d.cleared);
-      state.currentPhase=d.currentPhase||4;
+      state.currentPhase=d.currentPhase||5;
       document.getElementById('mgr-pct').value=state.mgrPct;
     }
     rebuildPinGrid(); renderManager(); checkLimits();
