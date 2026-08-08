@@ -1002,16 +1002,16 @@ async function sheetsRead(range){
 async function fetchPlayerData(name,pin){
   const scriptUrl=getScriptUrl();
   if(!scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
-  const results=await Promise.all(PLAYER_PHASES.map(async ph=>{
-    const league=sheetForPhase(ph);
-    const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}&league=${encodeURIComponent(league)}&phase=${ph}`;
-    const r=await fetch(url);
-    const j=await r.json();
-    if(!j.ok) throw new Error(j.error||'Login failed');
-    return {...j, phase:ph};
-  }));
-  const rows=results.flatMap(r=>(r.rows||[]).map(row=>({...row,phase:row.phase||r.phase})));
-  return {ok:true,rows,mgrPct:results[0].mgrPct,cleared:results[0].cleared};
+  const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
+  const r=await fetch(url);
+  const j=await r.json();
+  if(!j.ok) throw new Error(j.error||'Login failed');
+  return {
+    ok:true,
+    rows:(j.rows||[]).map(row=>({...row,phase:row.phase||1})),
+    mgrPct:j.mgrPct||1,
+    cleared:j.cleared
+  };
 }
 
 async function sheetsWrite(range,values){
