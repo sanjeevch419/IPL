@@ -1,334 +1,906 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Ledger</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
-:root {
-  --bg:#f5f6fa; --surface:#ffffff; --surface2:#f0f1f5; --border:#e2e4ea; --border2:#d0d3db;
-  --text:#1a1c23; --text2:#5a5f72; --text3:#9599a8;
-  --accent:#4f6ef7; --accent-dim:rgba(79,110,247,0.10); --accent-dim2:rgba(79,110,247,0.05);
-  --red:#e03c3c; --green:#1a9e57; --green-dim:rgba(26,158,87,0.10);
-  --amber:#c47d00; --amber-dim:rgba(196,125,0,0.10);
-  --header-bg:#1e2235; --header-text:#ffffff;
-  --radius:10px; --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;}
-.app{min-height:100vh;display:flex;flex-direction:column;}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--header-bg);position:sticky;top:0;z-index:100;}
-.logo{font-family:var(--mono);font-size:13px;color:#a0b4ff;letter-spacing:.06em;}
-.topbar-right{display:flex;align-items:center;gap:10px;}
-.user-chip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.10);border:1px solid rgba(255,255,255,0.18);border-radius:999px;padding:5px 12px 5px 8px;font-size:12px;color:#e8ecff;}
-.user-dot{width:7px;height:7px;border-radius:50%;background:#a0b4ff;}
-.user-dot.mgr{background:#ffc96b;}
-.screen{display:none;flex:1;}
-.screen.active{display:flex;flex-direction:column;}
-.center-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem;}
-.center-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:2rem;}
-.eyebrow{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;}
-.card-title-lg{font-size:22px;font-weight:600;margin-bottom:6px;}
-.card-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem;line-height:1.6;}
-.field{margin-bottom:14px;}
-.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-family:var(--mono);}
-.field input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:border-color .15s;}
-.field input:focus{border-color:var(--accent);}
-.field .hint{font-size:11px;color:var(--text3);margin-top:5px;font-family:var(--mono);}
-.btn{padding:10px 20px;border-radius:var(--radius);font-size:13px;font-family:var(--font);font-weight:500;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text);transition:all .15s;}
-.btn:hover{background:var(--surface2);}
-.topbar .btn{color:rgba(255,255,255,0.75);border-color:rgba(255,255,255,0.2);}
-.topbar .btn:hover{background:rgba(255,255,255,0.08);color:#fff;}
-.btn.accent{background:var(--accent);color:#ffffff;border-color:var(--accent);}
-.btn.accent:hover{opacity:.88;}
-.btn.sm{padding:7px 14px;font-size:12px;}
-.btn.ghost{border-color:transparent;color:rgba(255,255,255,0.5);font-size:12px;}
-.btn.ghost:hover{color:rgba(255,255,255,0.8);}
-.err-msg{font-size:12px;color:var(--red);margin-top:10px;min-height:16px;}
-.divider{display:flex;align-items:center;gap:12px;margin:1.25rem 0;}
-.divider hr{flex:1;border:none;border-top:1px solid var(--border2);}
-.divider span{font-size:11px;color:var(--text3);font-family:var(--mono);}
-.gconnect-banner{border-radius:var(--radius);padding:16px 18px;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--amber-dim);border:1px solid var(--amber);}
-.gconnect-banner.connected{background:var(--green-dim);border-color:var(--green);}
-.gconnect-text strong{display:block;font-size:13px;margin-bottom:2px;}
-.gconnect-text span{font-size:12px;color:var(--text2);}
-.gbtn{background:#fff;color:#3c4043;border:1px solid #dadce0;display:flex;align-items:center;gap:8px;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:500;white-space:nowrap;flex-shrink:0;transition:background .15s;}
-.gbtn:hover{background:#f8f9fa;}
-.main{flex:1;padding:24px;max-width:1000px;width:100%;margin:0 auto;}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1.25rem;overflow:hidden;}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap;}
-.card-label{font-family:var(--mono);font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;}
-.card-title{font-size:14px;font-weight:500;}
-.card-body{padding:18px;}
-.msg-area{width:100%;min-height:180px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:13px;padding:12px;resize:vertical;outline:none;line-height:1.8;}
-.msg-area:focus{border-color:var(--accent);}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;}
-.row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.muted{font-size:12px;color:var(--text2);}
-.pct-in{width:60px;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none;}
-.pct-in:focus{border-color:var(--accent);}
-.pin-grid{display:flex;flex-direction:column;gap:10px;}
-.pin-row-item{display:flex;align-items:center;gap:12px;}
-.pin-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.pin-in{width:130px;padding:8px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;}
-.pin-in:focus{border-color:var(--accent);}
-.pin-tag{font-size:11px;font-family:var(--mono);}
-.pin-tag.set{color:var(--green);}
-.pin-tag.unset{color:var(--text3);}
-.sync{font-size:11px;font-family:var(--mono);color:rgba(255,255,255,0.5);}
-.sync.ok{color:var(--green);}
-.sync.err{color:var(--red);}
-.sync.loading{color:var(--text3);}
-.match-block{margin-bottom:1.25rem;}
-.match-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 18px;background:var(--surface2);border-bottom:1px solid var(--border);}
-.match-name{font-weight:500;font-size:14px;}
-.ratio-tag{font-family:var(--mono);font-size:11px;color:var(--amber);background:var(--amber-dim);padding:3px 9px;border-radius:999px;}
-.round-tag{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:999px;border:1px solid var(--border2);}
-.winner-tag{font-family:var(--mono);font-size:11px;color:var(--green);background:var(--green-dim);padding:3px 9px;border-radius:999px;}
-.pending-tag{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface);padding:3px 9px;border-radius:999px;border:1px solid var(--border2);}
-table{width:100%;border-collapse:collapse;}
-th{padding:8px 12px;text-align:left;font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:#e8ecff;background:var(--header-bg);border-bottom:1px solid var(--border);font-weight:500;}
-td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:13px;}
-tr:last-child td{border-bottom:none;}
-tr:hover td{background:var(--accent-dim2);}
-.my-row td{background:var(--accent-dim2);}
-.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-family:var(--mono);background:var(--surface2);color:var(--text2);border:1px solid var(--border2);}
-.val-win{color:var(--green);font-family:var(--mono);font-weight:500;}
-.val-loss{color:var(--red);font-family:var(--mono);font-weight:500;}
-.val-mgr{color:var(--amber);font-family:var(--mono);}
-.val-n{color:var(--text3);font-family:var(--mono);}
-.summary-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:1rem;}
-.phase-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-.phase-tabs .btn{flex:1;min-width:72px;justify-content:center;text-align:center;}
-.phase-tabs .btn.tab-empty{opacity:.35;cursor:not-allowed;}
-.s-tile{flex:1;min-width:130px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
-.s-label{font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;}
-.s-val{font-size:22px;font-weight:600;font-family:var(--mono);}
-.s-val.win{color:var(--green);}
-.s-val.loss{color:var(--red);}
-.s-val.amber{color:var(--amber);}
-.locked-notice{display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface2);border-top:1px solid var(--border);font-size:12px;color:var(--text3);font-family:var(--mono);}
-.sample-box{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);padding:14px;font-family:var(--mono);font-size:12px;line-height:2;color:var(--text2);margin-top:10px;white-space:pre-wrap;}
-.kw{color:var(--accent);}
-.vl{color:var(--text);}
-.no-data{padding:24px;text-align:center;color:var(--text3);font-size:13px;font-family:var(--mono);}
-tr.edit-open td{background:var(--accent-dim)!important;}
-@media(max-width:600px){.main{padding:14px;}.topbar{padding:12px 14px;}th,td{padding:7px 8px;font-size:12px;}}
-</style>
-</head>
-<body>
-<div class="app">
-
-<div class="topbar">
-  <div class="logo">LEDGER</div>
-  <div class="topbar-right" id="topbar-right" style="display:none;">
-    <div class="user-chip">
-      <div class="user-dot" id="user-dot"></div>
-      <span id="user-chip-name"></span>
-    </div>
-    <button class="btn sm" onclick="doLogout()">Sign out</button>
-  </div>
-</div>
-
-<!-- SETUP -->
-<div class="screen active" id="screen-setup">
-  <div class="center-wrap">
-    <div class="center-card">
-      <div class="eyebrow">One-time setup</div>
-      <div class="card-title-lg">Connect your account</div>
-      <div class="card-sub">Saved privately on this device. Nothing sensitive is in the code.</div>
-      <div class="field">
-        <label>Google Sheet ID</label>
-        <input type="text" id="setup-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..."/>
-        <div class="hint">From Sheet URL → /spreadsheets/d/<strong>THIS_PART</strong>/edit</div>
-      </div>
-      <div class="field">
-        <label>Apps Script URL</label>
-        <input type="text" id="setup-script-url" placeholder="https://script.google.com/macros/s/.../exec"/>
-        <div class="hint">Deploy Code.gs as a Web App → copy the /exec URL here</div>
-      </div>
-      <div class="field">
-        <label>OAuth Client ID</label>
-        <input type="text" id="setup-client-id" placeholder="1234567890-abc.apps.googleusercontent.com"/>
-      </div>
-      <div class="divider"><hr/><span>manager pin</span><hr/></div>
-      <div class="field">
-        <label>Choose Manager PIN</label>
-        <input type="password" id="setup-mgr-pin" placeholder="Something only you know" maxlength="16"/>
-      </div>
-      <div class="field">
-        <label>Confirm Manager PIN</label>
-        <input type="password" id="setup-mgr-pin2" placeholder="Repeat PIN" maxlength="16"/>
-      </div>
-      <div class="err-msg" id="setup-err"></div>
-      <button class="btn accent" style="width:100%;margin-top:4px;" onclick="doSetup()">Save &amp; Continue →</button>
-    </div>
-  </div>
-</div>
-
-<!-- LOGIN -->
-<div class="screen" id="screen-login">
-  <div class="center-wrap">
-    <div class="center-card">
-      <div class="eyebrow">Ledger</div>
-      <div class="card-title-lg">Sign in</div>
-      <div class="card-sub">Enter your name and PIN to view your settlements.</div>
-      <div class="field">
-        <label>Name</label>
-        <input type="text" id="login-name" placeholder="e.g. Sanju, Venkata, Manager" autocomplete="off"/>
-      </div>
-      <div class="field">
-        <label>PIN</label>
-        <input type="password" id="login-pin" placeholder="Your PIN" maxlength="16"
-          onkeydown="if(event.key==='Enter')doLogin()"/>
-      </div>
-      <div class="err-msg" id="login-err"></div>
-      <button class="btn accent" style="width:100%;margin-top:4px;" onclick="doLogin()">Sign in →</button>
-      <div style="margin-top:10px;text-align:right;">
-        <button class="btn ghost" onclick="showSetup()">⚙ Reconfigure</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- MANAGER -->
-<div class="screen" id="screen-manager">
-  <div class="main">
-
-    <!-- Google connect banner -->
-    <div class="gconnect-banner" id="gconnect-banner">
-      <div class="gconnect-text">
-        <strong id="gconnect-title">Connect your Google Account</strong>
-        <span id="gconnect-sub">Required to read and write your Google Sheet.</span>
-      </div>
-      <button class="gbtn" id="gconnect-btn" onclick="googleSignIn()">
-        <svg viewBox="0 0 24 24" width="16" height="16" style="flex-shrink:0">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        Sign in with Google
-      </button>
-    </div>
-
-    <!-- Paste message -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-label">Step 1</div>
-          <div class="card-title">Paste WhatsApp message</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Ledger</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+      :root {
+        --bg: #f5f6fa;
+        --surface: #ffffff;
+        --surface2: #f0f1f5;
+        --border: #e2e4ea;
+        --border2: #d0d3db;
+        --text: #1a1c23;
+        --text2: #5a5f72;
+        --text3: #9599a8;
+        --accent: #4f6ef7;
+        --accent-dim: rgba(79, 110, 247, 0.1);
+        --accent-dim2: rgba(79, 110, 247, 0.05);
+        --red: #e03c3c;
+        --green: #1a9e57;
+        --green-dim: rgba(26, 158, 87, 0.1);
+        --amber: #c47d00;
+        --amber-dim: rgba(196, 125, 0, 0.1);
+        --header-bg: #1e2235;
+        --header-text: #ffffff;
+        --radius: 10px;
+        --font: 'DM Sans', sans-serif;
+        --mono: 'DM Mono', monospace;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 14px;
+      }
+      .app {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 24px;
+        border-bottom: 1px solid var(--border);
+        background: var(--header-bg);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .logo {
+        font-family: var(--mono);
+        font-size: 13px;
+        color: #a0b4ff;
+        letter-spacing: 0.06em;
+      }
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .user-chip {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 999px;
+        padding: 5px 12px 5px 8px;
+        font-size: 12px;
+        color: #e8ecff;
+      }
+      .user-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #a0b4ff;
+      }
+      .user-dot.mgr {
+        background: #ffc96b;
+      }
+      .screen {
+        display: none;
+        flex: 1;
+      }
+      .screen.active {
+        display: flex;
+        flex-direction: column;
+      }
+      .center-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+      .center-card {
+        width: 100%;
+        max-width: 420px;
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: 16px;
+        padding: 2rem;
+      }
+      .eyebrow {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--accent);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .card-title-lg {
+        font-size: 22px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .card-sub {
+        font-size: 13px;
+        color: var(--text2);
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+      }
+      .field {
+        margin-bottom: 14px;
+      }
+      .field label {
+        display: block;
+        font-size: 12px;
+        color: var(--text2);
+        margin-bottom: 6px;
+        font-family: var(--mono);
+      }
+      .field input {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--bg);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-size: 14px;
+        font-family: var(--font);
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .field input:focus {
+        border-color: var(--accent);
+      }
+      .field .hint {
+        font-size: 11px;
+        color: var(--text3);
+        margin-top: 5px;
+        font-family: var(--mono);
+      }
+      .btn {
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-family: var(--font);
+        font-weight: 500;
+        cursor: pointer;
+        border: 1px solid var(--border2);
+        background: transparent;
+        color: var(--text);
+        transition: all 0.15s;
+      }
+      .btn:hover {
+        background: var(--surface2);
+      }
+      .topbar .btn {
+        color: rgba(255, 255, 255, 0.75);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .topbar .btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+      .btn.accent {
+        background: var(--accent);
+        color: #ffffff;
+        border-color: var(--accent);
+      }
+      .btn.accent:hover {
+        opacity: 0.88;
+      }
+      .btn.sm {
+        padding: 7px 14px;
+        font-size: 12px;
+      }
+      .btn.ghost {
+        border-color: transparent;
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 12px;
+      }
+      .btn.ghost:hover {
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .err-msg {
+        font-size: 12px;
+        color: var(--red);
+        margin-top: 10px;
+        min-height: 16px;
+      }
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 1.25rem 0;
+      }
+      .divider hr {
+        flex: 1;
+        border: none;
+        border-top: 1px solid var(--border2);
+      }
+      .divider span {
+        font-size: 11px;
+        color: var(--text3);
+        font-family: var(--mono);
+      }
+      .gconnect-banner {
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        background: var(--amber-dim);
+        border: 1px solid var(--amber);
+      }
+      .gconnect-banner.connected {
+        background: var(--green-dim);
+        border-color: var(--green);
+      }
+      .gconnect-text strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 2px;
+      }
+      .gconnect-text span {
+        font-size: 12px;
+        color: var(--text2);
+      }
+      .gbtn {
+        background: #fff;
+        color: #3c4043;
+        border: 1px solid #dadce0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: var(--font);
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: background 0.15s;
+      }
+      .gbtn:hover {
+        background: #f8f9fa;
+      }
+      .main {
+        flex: 1;
+        padding: 24px;
+        max-width: 1000px;
+        width: 100%;
+        margin: 0 auto;
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        margin-bottom: 1.25rem;
+        overflow: hidden;
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .card-label {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 2px;
+      }
+      .card-title {
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .card-body {
+        padding: 18px;
+      }
+      .msg-area {
+        width: 100%;
+        min-height: 180px;
+        background: var(--bg);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        padding: 12px;
+        resize: vertical;
+        outline: none;
+        line-height: 1.8;
+      }
+      .msg-area:focus {
+        border-color: var(--accent);
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .row2 {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .muted {
+        font-size: 12px;
+        color: var(--text2);
+      }
+      .pct-in {
+        width: 60px;
+        padding: 7px 10px;
+        background: var(--bg);
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        color: var(--text);
+        font-size: 13px;
+        font-family: var(--mono);
+        outline: none;
+      }
+      .pct-in:focus {
+        border-color: var(--accent);
+      }
+      .pin-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .pin-row-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .pin-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: var(--accent-dim);
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .pin-in {
+        width: 130px;
+        padding: 8px 10px;
+        background: var(--bg);
+        border: 1px solid var(--border2);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        outline: none;
+      }
+      .pin-in:focus {
+        border-color: var(--accent);
+      }
+      .pin-tag {
+        font-size: 11px;
+        font-family: var(--mono);
+      }
+      .pin-tag.set {
+        color: var(--green);
+      }
+      .pin-tag.unset {
+        color: var(--text3);
+      }
+      .sync {
+        font-size: 11px;
+        font-family: var(--mono);
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .sync.ok {
+        color: var(--green);
+      }
+      .sync.err {
+        color: var(--red);
+      }
+      .sync.loading {
+        color: var(--text3);
+      }
+      .match-block {
+        margin-bottom: 1.25rem;
+      }
+      .match-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 12px 18px;
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+      }
+      .match-name {
+        font-weight: 500;
+        font-size: 14px;
+      }
+      .ratio-tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--amber);
+        background: var(--amber-dim);
+        padding: 3px 9px;
+        border-radius: 999px;
+      }
+      .round-tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+        background: var(--surface);
+        padding: 3px 9px;
+        border-radius: 999px;
+        border: 1px solid var(--border2);
+      }
+      .winner-tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--green);
+        background: var(--green-dim);
+        padding: 3px 9px;
+        border-radius: 999px;
+      }
+      .pending-tag {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text3);
+        background: var(--surface);
+        padding: 3px 9px;
+        border-radius: 999px;
+        border: 1px solid var(--border2);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        padding: 8px 12px;
+        text-align: left;
+        font-size: 10px;
+        font-family: var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #e8ecff;
+        background: var(--header-bg);
+        border-bottom: 1px solid var(--border);
+        font-weight: 500;
+      }
+      td {
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover td {
+        background: var(--accent-dim2);
+      }
+      .my-row td {
+        background: var(--accent-dim2);
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-family: var(--mono);
+        background: var(--surface2);
+        color: var(--text2);
+        border: 1px solid var(--border2);
+      }
+      .val-win {
+        color: var(--green);
+        font-family: var(--mono);
+        font-weight: 500;
+      }
+      .val-loss {
+        color: var(--red);
+        font-family: var(--mono);
+        font-weight: 500;
+      }
+      .val-mgr {
+        color: var(--amber);
+        font-family: var(--mono);
+      }
+      .val-n {
+        color: var(--text3);
+        font-family: var(--mono);
+      }
+      .summary-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+      }
+      .phase-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .phase-tabs .btn {
+        flex: 1;
+        min-width: 72px;
+        justify-content: center;
+        text-align: center;
+      }
+      .phase-tabs .btn.tab-empty {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+      .s-tile {
+        flex: 1;
+        min-width: 130px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px 16px;
+      }
+      .s-label {
+        font-size: 10px;
+        font-family: var(--mono);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text3);
+        margin-bottom: 6px;
+      }
+      .s-val {
+        font-size: 22px;
+        font-weight: 600;
+        font-family: var(--mono);
+      }
+      .s-val.win {
+        color: var(--green);
+      }
+      .s-val.loss {
+        color: var(--red);
+      }
+      .s-val.amber {
+        color: var(--amber);
+      }
+      .locked-notice {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: var(--surface2);
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--text3);
+        font-family: var(--mono);
+      }
+      .sample-box {
+        background: var(--bg);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius);
+        padding: 14px;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 2;
+        color: var(--text2);
+        margin-top: 10px;
+        white-space: pre-wrap;
+      }
+      .kw {
+        color: var(--accent);
+      }
+      .vl {
+        color: var(--text);
+      }
+      .no-data {
+        padding: 24px;
+        text-align: center;
+        color: var(--text3);
+        font-size: 13px;
+        font-family: var(--mono);
+      }
+      tr.edit-open td {
+        background: var(--accent-dim) !important;
+      }
+      @media (max-width: 600px) {
+        .main {
+          padding: 14px;
+        }
+        .topbar {
+          padding: 12px 14px;
+        }
+        th,
+        td {
+          padding: 7px 8px;
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="topbar">
+        <div class="logo">LEDGER</div>
+        <div class="topbar-right" id="topbar-right" style="display: none">
+          <div class="user-chip">
+            <div class="user-dot" id="user-dot"></div>
+            <span id="user-chip-name"></span>
+          </div>
+          <button class="btn sm" onclick="doLogout()">Sign out</button>
         </div>
-        <div class="row2">
-          <span class="muted">Manager cut</span>
-          <input type="number" class="pct-in" id="mgr-pct" value="1" min="0" max="20" step="0.1"/>
-          <span class="muted">%</span>
+      </div>
+
+      <!-- SETUP -->
+      <div class="screen active" id="screen-setup">
+        <div class="center-wrap">
+          <div class="center-card">
+            <div class="eyebrow">One-time setup</div>
+            <div class="card-title-lg">Connect your account</div>
+            <div class="card-sub">Saved privately on this device. Nothing sensitive is in the code.</div>
+            <div class="field">
+              <label>Google Sheet ID</label>
+              <input id="setup-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUq..." type="text" />
+              <div class="hint">From Sheet URL → /spreadsheets/d/<strong>THIS_PART</strong>/edit</div>
+            </div>
+            <div class="field">
+              <label>Apps Script URL</label>
+              <input id="setup-script-url" placeholder="https://script.google.com/macros/s/.../exec" type="text" />
+              <div class="hint">Deploy Code.gs as a Web App → copy the /exec URL here</div>
+            </div>
+            <div class="field">
+              <label>OAuth Client ID</label>
+              <input id="setup-client-id" placeholder="1234567890-abc.apps.googleusercontent.com" type="text" />
+            </div>
+            <div class="divider">
+              <hr />
+              <span>manager pin</span>
+              <hr />
+            </div>
+            <div class="field">
+              <label>Choose Manager PIN</label>
+              <input id="setup-mgr-pin" maxlength="16" placeholder="Something only you know" type="password" />
+            </div>
+            <div class="field">
+              <label>Confirm Manager PIN</label>
+              <input id="setup-mgr-pin2" maxlength="16" placeholder="Repeat PIN" type="password" />
+            </div>
+            <div class="err-msg" id="setup-err"></div>
+            <button class="btn accent" onclick="doSetup()" style="width: 100%; margin-top: 4px">
+              Save &amp; Continue →
+            </button>
+          </div>
         </div>
       </div>
-      <div class="card-body">
-        <textarea class="msg-area" id="mgr-input"></textarea>
-        <div class="row">
-          <button class="btn accent" onclick="mgr_parse()">Parse &amp; Save to Sheet</button>
-          <button class="btn" onclick="mgr_load_example()">Load example</button>
-          <span class="sync" id="sync-status"></span>
+
+      <!-- LOGIN -->
+      <div class="screen" id="screen-login">
+        <div class="center-wrap">
+          <div class="center-card">
+            <div class="eyebrow">Ledger</div>
+            <div class="card-title-lg">Sign in</div>
+            <div class="card-sub">Enter your name and PIN to view your settlements.</div>
+            <div class="field">
+              <label>Name</label>
+              <input autocomplete="off" id="login-name" placeholder="e.g. Sanju, Venkata, Manager" type="text" />
+            </div>
+            <div class="field">
+              <label>PIN</label>
+              <input
+                id="login-pin"
+                maxlength="16"
+                onkeydown="if(event.key==='Enter')doLogin()"
+                placeholder="Your PIN"
+                type="password"
+              />
+            </div>
+            <div class="err-msg" id="login-err"></div>
+            <button class="btn accent" onclick="doLogin()" style="width: 100%; margin-top: 4px">Sign in →</button>
+            <div style="margin-top: 10px; text-align: right">
+              <button class="btn ghost" onclick="showSetup()">⚙ Reconfigure</button>
+            </div>
+          </div>
         </div>
-        <div class="err-msg" id="mgr-err"></div>
-        <div style="margin-top:16px;">
-          <div class="muted" style="margin-bottom:6px;">Message format:</div>
-          <div class="sample-box"><span class="kw">Date:</span> <span class="vl">01-Apr-2025</span>
-<span class="kw">Match:</span> <span class="vl">MI vs CSK</span>
-<span class="kw">Winner:</span> <span class="vl">CSK</span>         ← omit if match not finished yet
+      </div>
 
-<span class="kw">Ratio:</span> <span class="vl">CSK 10:12</span>       ← CSK=underdog, MI=favourite
-<span class="vl">Sanju MI 100</span>
-<span class="vl">Venkata CSK 200</span>
+      <!-- MANAGER -->
+      <div class="screen" id="screen-manager">
+        <div class="main">
+          <!-- Google connect banner -->
+          <div class="gconnect-banner" id="gconnect-banner">
+            <div class="gconnect-text">
+              <strong id="gconnect-title">Connect your Google Account</strong>
+              <span id="gconnect-sub">Required to read and write your Google Sheet.</span>
+            </div>
+            <button class="gbtn" id="gconnect-btn" onclick="googleSignIn()">
+              <svg height="16" style="flex-shrink: 0" viewBox="0 0 24 24" width="16">
+                <path
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Sign in with Google
+            </button>
+          </div>
 
-<span class="kw">Ratio:</span> <span class="vl">MI 10:15</span>        ← second innings (optional)
-<span class="vl">Sanju MI 200</span>
-<span class="vl">Venkata CSK 300</span></div>
+          <!-- Paste message -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-label">Step 1</div>
+                <div class="card-title">Paste WhatsApp message</div>
+              </div>
+              <div class="row2">
+                <span class="muted">Manager cut</span>
+                <input class="pct-in" id="mgr-pct" max="20" min="0" step="0.1" type="number" value="1" />
+                <span class="muted">%</span>
+              </div>
+            </div>
+            <div class="card-body">
+              <textarea class="msg-area" id="mgr-input"></textarea>
+              <div class="row">
+                <button class="btn accent" onclick="mgr_parse()">Parse &amp; Save to Sheet</button>
+                <button class="btn" onclick="mgr_load_example()">Load example</button>
+                <span class="sync" id="sync-status"></span>
+              </div>
+              <div class="err-msg" id="mgr-err"></div>
+              <div style="margin-top: 16px">
+                <div class="muted" style="margin-bottom: 6px">Message format:</div>
+                <div class="sample-box">
+                  <span class="kw">Date:</span> <span class="vl">01-Apr-2025</span> <span class="kw">Match:</span>
+                  <span class="vl">MI vs CSK</span> <span class="kw">Winner:</span> <span class="vl">CSK</span> ← omit
+                  if match not finished yet
+
+                  <span class="kw">Ratio:</span> <span class="vl">CSK 10:12</span> ← CSK=underdog, MI=favourite
+                  <span class="vl">Sanju MI 100</span>
+                  <span class="vl">Venkata CSK 200</span>
+
+                  <span class="kw">Ratio:</span> <span class="vl">MI 10:15</span> ← second innings (optional)
+                  <span class="vl">Sanju MI 200</span>
+                  <span class="vl">Venkata CSK 300</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Player PINs -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-label">Step 2</div>
+                <div class="card-title">Player PINs</div>
+              </div>
+              <div class="row2">
+                <button class="btn sm" onclick="savePins()">Save PINs</button>
+                <span class="sync ok" id="pin-saved-msg"></span>
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="muted" style="margin-bottom: 14px">
+                Set a PIN for each player and share it privately on WhatsApp.
+              </p>
+              <div class="pin-grid" id="pin-grid"></div>
+            </div>
+          </div>
+
+          <div id="mgr-output"></div>
+        </div>
+      </div>
+
+      <!-- PLAYER -->
+      <div class="screen" id="screen-player">
+        <div class="main">
+          <div id="player-output"></div>
         </div>
       </div>
     </div>
 
-    <!-- Player PINs -->
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <div class="card-label">Step 2</div>
-          <div class="card-title">Player PINs</div>
-        </div>
-        <div class="row2">
-          <button class="btn sm" onclick="savePins()">Save PINs</button>
-          <span class="sync ok" id="pin-saved-msg"></span>
-        </div>
-      </div>
-      <div class="card-body">
-        <p class="muted" style="margin-bottom:14px;">Set a PIN for each player and share it privately on WhatsApp.</p>
-        <div class="pin-grid" id="pin-grid"></div>
-      </div>
-    </div>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+      // ── PLAYERS ────────────────────────────────────────────────────
+      const PLAYERS = [
+        'Sanju',
+        'Venkata',
+        'Karthik',
+        'Teja',
+        'Uday',
+        'Mohan',
+        'Rajesh',
+        'Shiva Korwar',
+        'Pavan',
+        'Baddam',
+        'Avinash',
+        'Varun',
+        'Sandeep',
+        'Ujwal',
+        'RaviTeja',
+        'Sivaji',
+        'Harish',
+      ];
+      function normName(n) {
+        return n.toLowerCase().replace(/[\s\-_]/g, '');
+      }
+      const PLAYER_NORM = PLAYERS.map(normName);
+      function matchPlayer(raw) {
+        const n = normName(raw);
+        const i = PLAYER_NORM.findIndex(p => p === n);
+        return i >= 0 ? PLAYERS[i] : null;
+      }
 
-    <div id="mgr-output"></div>
-  </div>
-</div>
+      // ── DEFAULT SCRIPT URL (baked in so players never see setup screen)
+      // Manager: replace this with your Apps Script /exec URL, then push to GitHub
+      const DEFAULT_SCRIPT_URL =
+        'https://script.google.com/macros/s/AKfycbxve89IzPu_IBdTGLt0WOr_uOy80Hc4dKLhnV6agA0f8lZ92_ejR0PaRKEjQNS9YZ7z7w/exec';
+      const PHASE_NAMES = { 4: 'MLC', 5: '100', 6: 'CPL', 7: 'ETPL' };
+      const PHASE_SHEET = { 5: '100', 6: 'CPL', 7: 'ETPL' };
+      const ACTIVE_PHASES = [5, 6, 7];
+      const PLAYER_PHASES = ACTIVE_PHASES;
+      function phaseLabel(ph) {
+        return PHASE_NAMES[ph] || 'Phase ' + ph;
+      }
+      function sheetForPhase(ph) {
+        return PHASE_SHEET[ph] || '100';
+      }
 
-<!-- PLAYER -->
-<div class="screen" id="screen-player">
-  <div class="main">
-    <div id="player-output"></div>
-  </div>
-</div>
+      // ── CONFIG ─────────────────────────────────────────────────────
+      function getCfg() {
+        try {
+          return JSON.parse(localStorage.getItem('ipl_cfg') || 'null') || {};
+        } catch (e) {
+          return {};
+        }
+      }
+      function saveCfg(c) {
+        localStorage.setItem('ipl_cfg', JSON.stringify(c));
+      }
+      function getScriptUrl() {
+        return DEFAULT_SCRIPT_URL || getCfg().scriptUrl;
+      }
 
-</div>
+      // ── STATE ──────────────────────────────────────────────────────
+      let state = {
+        rows: [],
+        newRows: null,
+        pins: {},
+        mgrPct: 1,
+        cleared: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} }, // { phase: { playerName: amountCleared } }
+        currentPhase: 6, // 5=100, 6=CPL, 7=ETPL — assigned to newly parsed data
+        editingRow: null, // index of row open for inline editing
+        currentUser: null,
+        playerTabPhase: 6, // player view: 5=100, 6=CPL, 7=ETPL
+        playerSummary: null, // set for summary-only test accounts
+        accessToken: null, // GIS token
+        tokenExpiry: 0,
+      };
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>
-// ── PLAYERS ────────────────────────────────────────────────────
-const PLAYERS = [
-  'Sanju','Venkata','Karthik','Teja','Uday','Mohan','Rajesh',
-  'Shiva Korwar','Pavan','Baddam','Avinash','Varun','Sandeep',
-  'Ujwal','RaviTeja','Sivaji','Harish'
-];
-function normName(n){ return n.toLowerCase().replace(/[\s\-_]/g,''); }
-const PLAYER_NORM = PLAYERS.map(normName);
-function matchPlayer(raw){
-  const n=normName(raw);
-  const i=PLAYER_NORM.findIndex(p=>p===n);
-  return i>=0?PLAYERS[i]:null;
-}
-
-// ── DEFAULT SCRIPT URL (baked in so players never see setup screen)
-// Manager: replace this with your Apps Script /exec URL, then push to GitHub
-const DEFAULT_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxve89IzPu_IBdTGLt0WOr_uOy80Hc4dKLhnV6agA0f8lZ92_ejR0PaRKEjQNS9YZ7z7w/exec';
-const PHASE_NAMES = {4:'MLC',5:'100',6:'CPL'};
-const PHASE_SHEET = {4:'MLC',5:'100',6:'CPL'};
-const PLAYER_PHASES = [4,5,6];
-function phaseLabel(ph){ return PHASE_NAMES[ph]||('Phase '+ph); }
-function sheetForPhase(ph){ return PHASE_SHEET[ph]||'100'; }
-
-// ── CONFIG ─────────────────────────────────────────────────────
-function getCfg(){
-  try{ return JSON.parse(localStorage.getItem('ipl_cfg')||'null')||{}; }
-  catch(e){ return {}; }
-}
-function saveCfg(c){ localStorage.setItem('ipl_cfg',JSON.stringify(c)); }
-function getScriptUrl(){ return DEFAULT_SCRIPT_URL || getCfg().scriptUrl; }
-
-// ── STATE ──────────────────────────────────────────────────────
-let state={
-  rows:[], newRows:null, pins:{}, mgrPct:1,
-  cleared:{1:{},2:{},3:{},4:{},5:{},6:{}}, // { phase: { playerName: amountCleared } }
-  currentPhase:5,      // 4=MLC, 5=100, 6=CPL — assigned to newly parsed data
-  editingRow:null,     // index of row open for inline editing
-  currentUser:null,
-  playerTabPhase:5,    // player view: 4=MLC, 5=100, 6=CPL
-  playerSummary:null,  // set for summary-only test accounts
-  accessToken:null,   // GIS token
-  tokenExpiry:0
-};
-
-const EXAMPLE=`Date: 01-Apr-2025
+      const EXAMPLE = `Date: 01-Apr-2025
 Match: MI vs CSK
 Winner: CSK
 
@@ -346,369 +918,441 @@ Karthik CSK 300
 Teja CSK 200
 Uday MI 150`;
 
-// ── TEST ACCOUNT (SanjeevR / 1990) ─────────────────────────────
-// Summary-only — no match rows. Phase totals are hardcoded.
-const TEST_SUMMARY = {
-  1: { net: -1800, cleared: 0 },
-  2: { net: -1600, cleared: 0 },
-  3: { net:  4000, cleared: 0 }
-};
+      // ── TEST ACCOUNT (SanjeevR / 1990) ─────────────────────────────
+      // Summary-only — no match rows. Phase totals are hardcoded.
+      const TEST_SUMMARY = {
+        1: { net: -1800, cleared: 0 },
+        2: { net: -1600, cleared: 0 },
+        3: { net: 4000, cleared: 0 },
+      };
 
-// ── SETUP ──────────────────────────────────────────────────────
-function showSetup(){
-  const cfg=getCfg();
-  if(cfg.sheetId)    document.getElementById('setup-sheet-id').value=cfg.sheetId;
-  if(cfg.scriptUrl)  document.getElementById('setup-script-url').value=cfg.scriptUrl;
-  if(cfg.clientId)   document.getElementById('setup-client-id').value=cfg.clientId;
-  show('screen-setup');
-}
-
-function doSetup(){
-  const sheetId   = document.getElementById('setup-sheet-id').value.trim();
-  const scriptUrl = document.getElementById('setup-script-url').value.trim();
-  const clientId  = document.getElementById('setup-client-id').value.trim();
-  const pin       = document.getElementById('setup-mgr-pin').value.trim();
-  const pin2      = document.getElementById('setup-mgr-pin2').value.trim();
-  const err       = document.getElementById('setup-err');
-  err.textContent='';
-  if(!sheetId)   { err.textContent='Enter your Sheet ID.';        return; }
-  if(!scriptUrl) { err.textContent='Enter your Apps Script URL.'; return; }
-  if(!clientId)  { err.textContent='Enter your Client ID.';       return; }
-  if(!pin)       { err.textContent='Choose a manager PIN.';       return; }
-  if(pin!==pin2) { err.textContent='PINs do not match.';          return; }
-  saveCfg({...getCfg(), sheetId, scriptUrl, clientId, mgrPin:pin});
-  show('screen-login');
-}
-
-// ── LOGIN ──────────────────────────────────────────────────────
-function doLogin(){
-  const cfg=getCfg();
-  const rawName=document.getElementById('login-name').value.trim();
-  const pin=document.getElementById('login-pin').value.trim();
-  const err=document.getElementById('login-err');
-  err.textContent='';
-  if(!rawName){err.textContent='Enter your name.';return;}
-  if(!pin){err.textContent='Enter your PIN.';return;}
-
-  if(normName(rawName)==='manager'){
-    if(!cfg.mgrPin){err.textContent='Manager not set up on this device. Use ⚙ Reconfigure.';return;}
-    if(pin!==cfg.mgrPin){err.textContent='Incorrect manager PIN.';return;}
-  }
-
-  if(normName(rawName)==='manager' && pin===cfg.mgrPin){
-    state.currentUser='MANAGER';
-    showTopbar('Manager',true);
-    show('screen-manager');
-    updateBanner();
-    loadFromSheet();
-    return;
-  }
-
-  // Test account — intercept before player lookup so it stays out of PLAYERS/sheet
-  if(normName(rawName)==='sanjeewr' && pin==='1990'){
-    state.rows=[];
-    state.playerSummary=TEST_SUMMARY;
-    err.textContent='';
-    loginAsPlayer('SanjeevR');
-    return;
-  }
-
-  const matched=matchPlayer(rawName);
-  if(matched){
-    err.textContent='Checking…';
-    fetchPlayerData(matched,pin).then(data=>{
-      state.rows=(data.rows||[]).map(r=>({...r,phase:r.phase||1}));
-      state.mgrPct=data.mgrPct||1;
-      state.cleared=migrateCleared(data.cleared);
-      err.textContent='';
-      loginAsPlayer(matched);
-    }).catch(e=>{
-      err.textContent=e.message||'Incorrect name or PIN. Contact the manager.';
-    });
-    return;
-  }
-  err.textContent='Incorrect name or PIN. Contact the manager.';
-}
-
-function loginAsPlayer(name){
-  state.currentUser=name;
-  showTopbar(name,false);
-  show('screen-player');
-  renderPlayer(name);
-}
-
-function doLogout(){
-  state.currentUser=null;
-  state.playerSummary=null;
-  document.getElementById('login-name').value='';
-  document.getElementById('login-pin').value='';
-  document.getElementById('login-err').textContent='';
-  document.getElementById('topbar-right').style.display='none';
-  show('screen-login');
-}
-
-function showTopbar(name,isMgr){
-  document.getElementById('topbar-right').style.display='flex';
-  document.getElementById('user-chip-name').textContent=name;
-  document.getElementById('user-dot').className='user-dot'+(isMgr?' mgr':'');
-}
-
-function show(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-// ── GOOGLE IDENTITY SERVICES (new API) ─────────────────────────
-let tokenClient=null;
-
-function initGIS(){
-  const cfg=getCfg();
-  if(!cfg.clientId) return;
-  tokenClient=google.accounts.oauth2.initTokenClient({
-    client_id: cfg.clientId,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    callback: (response)=>{
-      if(response.error){
-        alert('Google sign-in failed: '+response.error);
-        return;
+      // ── SETUP ──────────────────────────────────────────────────────
+      function showSetup() {
+        const cfg = getCfg();
+        if (cfg.sheetId) document.getElementById('setup-sheet-id').value = cfg.sheetId;
+        if (cfg.scriptUrl) document.getElementById('setup-script-url').value = cfg.scriptUrl;
+        if (cfg.clientId) document.getElementById('setup-client-id').value = cfg.clientId;
+        show('screen-setup');
       }
-      state.accessToken=response.access_token;
-      state.tokenExpiry=Date.now()+(response.expires_in-60)*1000;
-      updateBanner();
-      loadFromSheet();
-    }
-  });
-}
 
-function googleSignIn(){
-  if(!tokenClient){
-    // GIS script might still be loading — try init again
-    try{ initGIS(); } catch(e){}
-    if(!tokenClient){
-      alert('Google sign-in not ready yet. Please wait 2 seconds and try again.');
-      return;
-    }
-  }
-  // If we have a valid token already, just use it
-  if(state.accessToken && Date.now()<state.tokenExpiry){
-    updateBanner();
-    loadFromSheet();
-    return;
-  }
-  // Request new token — this opens the Google popup
-  tokenClient.requestAccessToken({prompt:'consent'});
-}
-
-function updateBanner(){
-  const banner=document.getElementById('gconnect-banner');
-  const title=document.getElementById('gconnect-title');
-  const sub=document.getElementById('gconnect-sub');
-  const btn=document.getElementById('gconnect-btn');
-  const connected=!!(state.accessToken && Date.now()<state.tokenExpiry);
-  if(connected){
-    banner.className='gconnect-banner connected';
-    title.textContent='✓ Google Account connected';
-    title.style.color='var(--green)';
-    sub.textContent='Sheet sync is active.';
-    btn.style.display='none';
-  } else {
-    banner.className='gconnect-banner';
-    title.textContent='Connect your Google Account';
-    title.style.color='';
-    sub.textContent='Required to read and write your Google Sheet.';
-    btn.style.display='flex';
-  }
-}
-
-// ── PARSE ──────────────────────────────────────────────────────
-function mgr_load_example(){ document.getElementById('mgr-input').value=EXAMPLE; }
-
-function mgr_parse(){
-  const raw=document.getElementById('mgr-input').value.trim();
-  const err=document.getElementById('mgr-err');
-  err.textContent='';
-  state.mgrPct=parseFloat(document.getElementById('mgr-pct').value)||1;
-  const result=parseMessage(raw);
-  if(!result.ok){err.textContent=result.error;return;}
-  const imbalances=[];
-  for(const row of result.rows){
-    if(!row.winner) continue;
-    let grossSum=0;
-    for(const p of PLAYERS){
-      const bet=row.ratio.bets[p]; if(!bet) continue;
-      const c=calcBet(row.ratio,bet,row.winner,p);
-      if(c.gross!==null) grossSum+=c.gross;
-    }
-    if(Math.abs(grossSum)>0.01)
-      imbalances.push(`${row.match} R${row.ratio.roundNum}: sum = ${grossSum>=0?'+':''}${grossSum.toFixed(2)}`);
-  }
-  if(imbalances.length){err.textContent='Book not balanced — '+imbalances.join('; ');return;}
-  result.rows.forEach(r=>r.phase=state.currentPhase);
-  state.newRows=result.rows;
-  state.rows=[...state.rows,...result.rows];
-  rebuildPinGrid();
-  renderManager();
-  saveToSheet();
-}
-
-function parseMessage(raw){
-  const lines=raw.split('\n').map(l=>l.trim()).filter(Boolean);
-  let date='',match='',winner='',teams=[];
-  let currentRatio=null,roundNum=0;
-  const rows=[];
-  const unknownNames=new Set();
-  for(const line of lines){
-    if(/^date:/i.test(line)){date=line.replace(/^date:\s*/i,'').trim();continue;}
-    if(/^match:/i.test(line)){
-      match=line.replace(/^match:\s*/i,'').trim();
-      teams=match.split(/\s+vs\s+/i).map(t=>t.trim().toUpperCase());
-      continue;
-    }
-    if(/^winner:/i.test(line)){winner=line.replace(/^winner:\s*/i,'').trim().toUpperCase();continue;}
-    if(/^ratio:/i.test(line)){
-      const rStr=line.replace(/^ratio:\s*/i,'').trim();
-      const rm=rStr.match(/^(.+?)\s+(\d+):(\d+)$/i);
-      if(!rm) return {ok:false,error:'Bad ratio: '+rStr};
-      roundNum++;
-      currentRatio={underdog:rm[1].trim().toUpperCase(),low:parseInt(rm[2]),high:parseInt(rm[3]),roundNum,bets:{}};
-      rows.push({date,match,teams,winner,ratio:currentRatio});
-      continue;
-    }
-    if(currentRatio){
-      const m=line.match(/^(.+?)\s+([A-Za-z0-9]+)\s+(\d+(?:\.\d+)?)$/);
-      if(m){
-        const rawName=m[1].trim();
-        const p=matchPlayer(rawName);
-        if(p) currentRatio.bets[p]={team:m[2].trim().toUpperCase(),amount:parseFloat(m[3])};
-        else unknownNames.add(rawName);
+      function doSetup() {
+        const sheetId = document.getElementById('setup-sheet-id').value.trim();
+        const scriptUrl = document.getElementById('setup-script-url').value.trim();
+        const clientId = document.getElementById('setup-client-id').value.trim();
+        const pin = document.getElementById('setup-mgr-pin').value.trim();
+        const pin2 = document.getElementById('setup-mgr-pin2').value.trim();
+        const err = document.getElementById('setup-err');
+        err.textContent = '';
+        if (!sheetId) {
+          err.textContent = 'Enter your Sheet ID.';
+          return;
+        }
+        if (!scriptUrl) {
+          err.textContent = 'Enter your Apps Script URL.';
+          return;
+        }
+        if (!clientId) {
+          err.textContent = 'Enter your Client ID.';
+          return;
+        }
+        if (!pin) {
+          err.textContent = 'Choose a manager PIN.';
+          return;
+        }
+        if (pin !== pin2) {
+          err.textContent = 'PINs do not match.';
+          return;
+        }
+        saveCfg({ ...getCfg(), sheetId, scriptUrl, clientId, mgrPin: pin });
+        show('screen-login');
       }
-    }
-  }
-  if(!date) return {ok:false,error:'Missing Date: line'};
-  if(!match) return {ok:false,error:'Missing Match: line'};
-  if(!rows.length) return {ok:false,error:'No Ratio: blocks found'};
-  if(unknownNames.size>0) return {ok:false,error:`Unknown player name(s): ${[...unknownNames].join(', ')} — check spelling`};
-  return {ok:true,rows};
-}
 
-// ── ODDS CALC ──────────────────────────────────────────────────
-// ratio underdog LOW:HIGH
-// FAVOURITE  → win:+stake        lose:-(stake×high/low)
-// UNDERDOG   → win:+(stake×high/low)  lose:-stake
-const MGR_CUT_EXEMPT = ['Sanju'];
+      // ── LOGIN ──────────────────────────────────────────────────────
+      function doLogin() {
+        const cfg = getCfg();
+        const rawName = document.getElementById('login-name').value.trim();
+        const pin = document.getElementById('login-pin').value.trim();
+        const err = document.getElementById('login-err');
+        err.textContent = '';
+        if (!rawName) {
+          err.textContent = 'Enter your name.';
+          return;
+        }
+        if (!pin) {
+          err.textContent = 'Enter your PIN.';
+          return;
+        }
 
-function calcBet(ratio,bet,winner,playerName=''){
-  if(!winner||!bet) return {gross:null,mgr:null,net:null};
-  const isFav=bet.team!==ratio.underdog;
-  const won=bet.team===winner;
-  let gross;
-  if(isFav) gross=won?bet.amount:-(bet.amount*ratio.high/ratio.low);
-  else       gross=won?(bet.amount*ratio.high/ratio.low):-bet.amount;
-  const exempt=MGR_CUT_EXEMPT.includes(playerName);
-  const mgr=(won&&!exempt) ? gross*(state.mgrPct/100) : 0;
-  return {gross,mgr,net:gross-mgr,won};
-}
+        if (normName(rawName) === 'manager') {
+          if (!cfg.mgrPin) {
+            err.textContent = 'Manager not set up on this device. Use ⚙ Reconfigure.';
+            return;
+          }
+          if (pin !== cfg.mgrPin) {
+            err.textContent = 'Incorrect manager PIN.';
+            return;
+          }
+        }
 
-// ── PINS ───────────────────────────────────────────────────────
-function rebuildPinGrid(){
-  const grid=document.getElementById('pin-grid');
-  grid.innerHTML=PLAYERS.map(p=>{
-    const isSet=!!state.pins[p];
-    const id='pin-'+p.replace(/\s/g,'_');
-    return `<div class="pin-row-item">
-      <div class="pin-avatar">${p.substring(0,2).toUpperCase()}</div>
+        if (normName(rawName) === 'manager' && pin === cfg.mgrPin) {
+          state.currentUser = 'MANAGER';
+          showTopbar('Manager', true);
+          show('screen-manager');
+          updateBanner();
+          loadFromSheet();
+          return;
+        }
+
+        // Test account — intercept before player lookup so it stays out of PLAYERS/sheet
+        if (normName(rawName) === 'sanjeewr' && pin === '1990') {
+          state.rows = [];
+          state.playerSummary = TEST_SUMMARY;
+          err.textContent = '';
+          loginAsPlayer('SanjeevR');
+          return;
+        }
+
+        const matched = matchPlayer(rawName);
+        if (matched) {
+          err.textContent = 'Checking…';
+          fetchPlayerData(matched, pin)
+            .then(data => {
+              state.rows = (data.rows || []).map(r => ({ ...r, phase: r.phase || 1 }));
+              state.mgrPct = data.mgrPct || 1;
+              state.cleared = migrateCleared(data.cleared);
+              err.textContent = '';
+              loginAsPlayer(matched);
+            })
+            .catch(e => {
+              err.textContent = e.message || 'Incorrect name or PIN. Contact the manager.';
+            });
+          return;
+        }
+        err.textContent = 'Incorrect name or PIN. Contact the manager.';
+      }
+
+      function loginAsPlayer(name) {
+        state.currentUser = name;
+        state.playerTabPhase = 6;
+        showTopbar(name, false);
+        show('screen-player');
+        renderPlayer(name);
+      }
+
+      function doLogout() {
+        state.currentUser = null;
+        state.playerSummary = null;
+        document.getElementById('login-name').value = '';
+        document.getElementById('login-pin').value = '';
+        document.getElementById('login-err').textContent = '';
+        document.getElementById('topbar-right').style.display = 'none';
+        show('screen-login');
+      }
+
+      function showTopbar(name, isMgr) {
+        document.getElementById('topbar-right').style.display = 'flex';
+        document.getElementById('user-chip-name').textContent = name;
+        document.getElementById('user-dot').className = 'user-dot' + (isMgr ? ' mgr' : '');
+      }
+
+      function show(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+      }
+
+      // ── GOOGLE IDENTITY SERVICES (new API) ─────────────────────────
+      let tokenClient = null;
+
+      function initGIS() {
+        const cfg = getCfg();
+        if (!cfg.clientId) return;
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: cfg.clientId,
+          scope: 'https://www.googleapis.com/auth/spreadsheets',
+          callback: response => {
+            if (response.error) {
+              alert('Google sign-in failed: ' + response.error);
+              return;
+            }
+            state.accessToken = response.access_token;
+            state.tokenExpiry = Date.now() + (response.expires_in - 60) * 1000;
+            updateBanner();
+            loadFromSheet();
+          },
+        });
+      }
+
+      function googleSignIn() {
+        if (!tokenClient) {
+          // GIS script might still be loading — try init again
+          try {
+            initGIS();
+          } catch (e) {}
+          if (!tokenClient) {
+            alert('Google sign-in not ready yet. Please wait 2 seconds and try again.');
+            return;
+          }
+        }
+        // If we have a valid token already, just use it
+        if (state.accessToken && Date.now() < state.tokenExpiry) {
+          updateBanner();
+          loadFromSheet();
+          return;
+        }
+        // Request new token — this opens the Google popup
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      }
+
+      function updateBanner() {
+        const banner = document.getElementById('gconnect-banner');
+        const title = document.getElementById('gconnect-title');
+        const sub = document.getElementById('gconnect-sub');
+        const btn = document.getElementById('gconnect-btn');
+        const connected = !!(state.accessToken && Date.now() < state.tokenExpiry);
+        if (connected) {
+          banner.className = 'gconnect-banner connected';
+          title.textContent = '✓ Google Account connected';
+          title.style.color = 'var(--green)';
+          sub.textContent = 'Sheet sync is active.';
+          btn.style.display = 'none';
+        } else {
+          banner.className = 'gconnect-banner';
+          title.textContent = 'Connect your Google Account';
+          title.style.color = '';
+          sub.textContent = 'Required to read and write your Google Sheet.';
+          btn.style.display = 'flex';
+        }
+      }
+
+      // ── PARSE ──────────────────────────────────────────────────────
+      function mgr_load_example() {
+        document.getElementById('mgr-input').value = EXAMPLE;
+      }
+
+      function mgr_parse() {
+        const raw = document.getElementById('mgr-input').value.trim();
+        const err = document.getElementById('mgr-err');
+        err.textContent = '';
+        state.mgrPct = parseFloat(document.getElementById('mgr-pct').value) || 1;
+        const result = parseMessage(raw);
+        if (!result.ok) {
+          err.textContent = result.error;
+          return;
+        }
+        const imbalances = [];
+        for (const row of result.rows) {
+          if (!row.winner) continue;
+          let grossSum = 0;
+          for (const p of PLAYERS) {
+            const bet = row.ratio.bets[p];
+            if (!bet) continue;
+            const c = calcBet(row.ratio, bet, row.winner, p);
+            if (c.gross !== null) grossSum += c.gross;
+          }
+          if (Math.abs(grossSum) > 0.01)
+            imbalances.push(
+              `${row.match} R${row.ratio.roundNum}: sum = ${grossSum >= 0 ? '+' : ''}${grossSum.toFixed(2)}`,
+            );
+        }
+        if (imbalances.length) {
+          err.textContent = 'Book not balanced — ' + imbalances.join('; ');
+          return;
+        }
+        result.rows.forEach(r => (r.phase = state.currentPhase));
+        state.newRows = result.rows;
+        state.rows = [...state.rows, ...result.rows];
+        rebuildPinGrid();
+        renderManager();
+        saveToSheet();
+      }
+
+      function parseMessage(raw) {
+        const lines = raw
+          .split('\n')
+          .map(l => l.trim())
+          .filter(Boolean);
+        let date = '',
+          match = '',
+          winner = '',
+          teams = [];
+        let currentRatio = null,
+          roundNum = 0;
+        const rows = [];
+        const unknownNames = new Set();
+        for (const line of lines) {
+          if (/^date:/i.test(line)) {
+            date = line.replace(/^date:\s*/i, '').trim();
+            continue;
+          }
+          if (/^match:/i.test(line)) {
+            match = line.replace(/^match:\s*/i, '').trim();
+            teams = match.split(/\s+vs\s+/i).map(t => t.trim().toUpperCase());
+            continue;
+          }
+          if (/^winner:/i.test(line)) {
+            winner = line
+              .replace(/^winner:\s*/i, '')
+              .trim()
+              .toUpperCase();
+            continue;
+          }
+          if (/^ratio:/i.test(line)) {
+            const rStr = line.replace(/^ratio:\s*/i, '').trim();
+            const rm = rStr.match(/^(.+?)\s+(\d+):(\d+)$/i);
+            if (!rm) return { ok: false, error: 'Bad ratio: ' + rStr };
+            roundNum++;
+            currentRatio = {
+              underdog: rm[1].trim().toUpperCase(),
+              low: parseInt(rm[2]),
+              high: parseInt(rm[3]),
+              roundNum,
+              bets: {},
+            };
+            rows.push({ date, match, teams, winner, ratio: currentRatio });
+            continue;
+          }
+          if (currentRatio) {
+            const m = line.match(/^(.+?)\s+([A-Za-z0-9]+)\s+(\d+(?:\.\d+)?)$/);
+            if (m) {
+              const rawName = m[1].trim();
+              const p = matchPlayer(rawName);
+              if (p) currentRatio.bets[p] = { team: m[2].trim().toUpperCase(), amount: parseFloat(m[3]) };
+              else unknownNames.add(rawName);
+            }
+          }
+        }
+        if (!date) return { ok: false, error: 'Missing Date: line' };
+        if (!match) return { ok: false, error: 'Missing Match: line' };
+        if (!rows.length) return { ok: false, error: 'No Ratio: blocks found' };
+        if (unknownNames.size > 0)
+          return { ok: false, error: `Unknown player name(s): ${[...unknownNames].join(', ')} — check spelling` };
+        return { ok: true, rows };
+      }
+
+      // ── ODDS CALC ──────────────────────────────────────────────────
+      // ratio underdog LOW:HIGH
+      // FAVOURITE  → win:+stake        lose:-(stake×high/low)
+      // UNDERDOG   → win:+(stake×high/low)  lose:-stake
+      const MGR_CUT_EXEMPT = ['Sanju'];
+
+      function calcBet(ratio, bet, winner, playerName = '') {
+        if (!winner || !bet) return { gross: null, mgr: null, net: null };
+        const isFav = bet.team !== ratio.underdog;
+        const won = bet.team === winner;
+        let gross;
+        if (isFav) gross = won ? bet.amount : -((bet.amount * ratio.high) / ratio.low);
+        else gross = won ? (bet.amount * ratio.high) / ratio.low : -bet.amount;
+        const exempt = MGR_CUT_EXEMPT.includes(playerName);
+        const mgr = won && !exempt ? gross * (state.mgrPct / 100) : 0;
+        return { gross, mgr, net: gross - mgr, won };
+      }
+
+      // ── PINS ───────────────────────────────────────────────────────
+      function rebuildPinGrid() {
+        const grid = document.getElementById('pin-grid');
+        grid.innerHTML = PLAYERS.map(p => {
+          const isSet = !!state.pins[p];
+          const id = 'pin-' + p.replace(/\s/g, '_');
+          return `<div class="pin-row-item">
+      <div class="pin-avatar">${p.substring(0, 2).toUpperCase()}</div>
       <span style="font-size:13px;min-width:110px;color:var(--text)">${p}</span>
       <input type="text" class="pin-in" maxlength="8" placeholder="set PIN"
-        value="${state.pins[p]||''}" id="${id}"/>
-      <span class="pin-tag ${isSet?'set':'unset'}">${isSet?'✓ set':'not set'}</span>
+        value="${state.pins[p] || ''}" id="${id}"/>
+      <span class="pin-tag ${isSet ? 'set' : 'unset'}">${isSet ? '✓ set' : 'not set'}</span>
     </div>`;
-  }).join('');
-}
+        }).join('');
+      }
 
-function savePins(){
-  PLAYERS.forEach(p=>{
-    const el=document.getElementById('pin-'+p.replace(/\s/g,'_'));
-    if(el&&el.value.trim()) state.pins[p]=el.value.trim();
-  });
-  rebuildPinGrid();
-  const msg=document.getElementById('pin-saved-msg');
-  msg.textContent='✓ Saved';
-  setTimeout(()=>msg.textContent='',2500);
-  saveToSheet();
-}
+      function savePins() {
+        PLAYERS.forEach(p => {
+          const el = document.getElementById('pin-' + p.replace(/\s/g, '_'));
+          if (el && el.value.trim()) state.pins[p] = el.value.trim();
+        });
+        rebuildPinGrid();
+        const msg = document.getElementById('pin-saved-msg');
+        msg.textContent = '✓ Saved';
+        setTimeout(() => (msg.textContent = ''), 2500);
+        saveToSheet();
+      }
 
-// ── FORMAT ─────────────────────────────────────────────────────
-function fmtPL(v){
-  if(v===null||v===undefined) return '<span class="val-n">—</span>';
-  const n=parseFloat(v);
-  return `<span class="${n>=0?'val-win':'val-loss'}">${n>=0?'+':'-'}₹${Math.abs(n).toFixed(2)}</span>`;
-}
-function fmtMgr(v){
-  if(v===null||v===undefined) return '<span class="val-n">—</span>';
-  return `<span class="val-mgr">₹${parseFloat(v).toFixed(2)}</span>`;
-}
+      // ── FORMAT ─────────────────────────────────────────────────────
+      function fmtPL(v) {
+        if (v === null || v === undefined) return '<span class="val-n">—</span>';
+        const n = parseFloat(v);
+        return `<span class="${n >= 0 ? 'val-win' : 'val-loss'}">${n >= 0 ? '+' : '-'}₹${Math.abs(n).toFixed(2)}</span>`;
+      }
+      function fmtMgr(v) {
+        if (v === null || v === undefined) return '<span class="val-n">—</span>';
+        return `<span class="val-mgr">₹${parseFloat(v).toFixed(2)}</span>`;
+      }
 
-// ── DELETE ROW ─────────────────────────────────────────────────
-async function deleteRow(i){
-  const row=state.rows[i];
-  if(!confirm(`Delete "${row.match} Round ${row.ratio.roundNum} (${row.date})"?`)) return;
-  if(!state.accessToken||Date.now()>=state.tokenExpiry){
-    alert('Google session expired. Click "Sign in with Google" to reconnect, then try again.');
-    return;
-  }
-  state.rows.splice(i,1);
-  renderManager();
-  await saveToSheet();
-}
+      // ── DELETE ROW ─────────────────────────────────────────────────
+      async function deleteRow(i) {
+        const row = state.rows[i];
+        if (!confirm(`Delete "${row.match} Round ${row.ratio.roundNum} (${row.date})"?`)) return;
+        if (!state.accessToken || Date.now() >= state.tokenExpiry) {
+          alert('Google session expired. Click "Sign in with Google" to reconnect, then try again.');
+          return;
+        }
+        state.rows.splice(i, 1);
+        renderManager();
+        await saveToSheet();
+      }
 
-// ── EDIT ROW ───────────────────────────────────────────────────
-function openEdit(i){ state.editingRow=i; renderManager(); }
-function cancelEdit(){ state.editingRow=null; renderManager(); }
+      // ── EDIT ROW ───────────────────────────────────────────────────
+      function openEdit(i) {
+        state.editingRow = i;
+        renderManager();
+      }
+      function cancelEdit() {
+        state.editingRow = null;
+        renderManager();
+      }
 
-async function saveEdit(i){
-  if(!state.accessToken||Date.now()>=state.tokenExpiry){
-    alert('Google session expired. Reconnect first.');
-    return;
-  }
-  const row=state.rows[i];
-  const winnerVal=document.getElementById('edit-winner-'+i).value.trim();
-  row.winner=(winnerVal==='Pending'||!winnerVal)?'':winnerVal.toUpperCase();
-  const newBets={};
-  for(const p of PLAYERS){
-    const sid=p.replace(/\s/g,'_');
-    const teamEl=document.getElementById('edit-team-'+sid+'-'+i);
-    const amtEl=document.getElementById('edit-amt-'+sid+'-'+i);
-    if(!teamEl||!amtEl) continue;
-    const amt=parseFloat(amtEl.value);
-    if(amt>0) newBets[p]={team:teamEl.value,amount:amt};
-  }
-  row.ratio.bets=newBets;
-  state.editingRow=null;
-  renderManager();
-  await saveToSheet();
-}
+      async function saveEdit(i) {
+        if (!state.accessToken || Date.now() >= state.tokenExpiry) {
+          alert('Google session expired. Reconnect first.');
+          return;
+        }
+        const row = state.rows[i];
+        const winnerVal = document.getElementById('edit-winner-' + i).value.trim();
+        row.winner = winnerVal === 'Pending' || !winnerVal ? '' : winnerVal.toUpperCase();
+        const newBets = {};
+        for (const p of PLAYERS) {
+          const sid = p.replace(/\s/g, '_');
+          const teamEl = document.getElementById('edit-team-' + sid + '-' + i);
+          const amtEl = document.getElementById('edit-amt-' + sid + '-' + i);
+          if (!teamEl || !amtEl) continue;
+          const amt = parseFloat(amtEl.value);
+          if (amt > 0) newBets[p] = { team: teamEl.value, amount: amt };
+        }
+        row.ratio.bets = newBets;
+        state.editingRow = null;
+        renderManager();
+        await saveToSheet();
+      }
 
-function buildEditForm(i){
-  const row=state.rows[i];
-  const teams=row.teams;
-  const winnerOpts=['Pending',...teams].map(t=>
-    `<option value="${t}"${(t===(row.winner||'Pending'))?' selected':''}>${t}</option>`
-  ).join('');
-  const playerRows=PLAYERS.map(p=>{
-    const sid=p.replace(/\s/g,'_');
-    const b=row.ratio.bets[p];
-    const teamOpts=teams.map(t=>
-      `<option value="${t}"${(b&&b.team===t)?' selected':''}>${t}</option>`
-    ).join('');
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
-      <div class="pin-avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">${p.substring(0,2).toUpperCase()}</div>
+      function buildEditForm(i) {
+        const row = state.rows[i];
+        const teams = row.teams;
+        const winnerOpts = ['Pending', ...teams]
+          .map(t => `<option value="${t}"${t === (row.winner || 'Pending') ? ' selected' : ''}>${t}</option>`)
+          .join('');
+        const playerRows = PLAYERS.map(p => {
+          const sid = p.replace(/\s/g, '_');
+          const b = row.ratio.bets[p];
+          const teamOpts = teams
+            .map(t => `<option value="${t}"${b && b.team === t ? ' selected' : ''}>${t}</option>`)
+            .join('');
+          return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+      <div class="pin-avatar" style="width:28px;height:28px;font-size:11px;flex-shrink:0;">${p.substring(0, 2).toUpperCase()}</div>
       <span style="font-size:13px;min-width:110px;">${p}</span>
       <select id="edit-team-${sid}-${i}" class="pct-in" style="width:72px;">${teamOpts}</select>
       <input id="edit-amt-${sid}-${i}" type="number" class="pct-in" style="width:80px;"
-        placeholder="amount" min="0" step="1" value="${b?b.amount:''}"/>
+        placeholder="amount" min="0" step="1" value="${b ? b.amount : ''}"/>
     </div>`;
-  }).join('');
-  return `<div>
+        }).join('');
+        return `<div>
     <div style="margin-bottom:10px;display:flex;align-items:center;gap:12px;">
       <label style="font-family:var(--mono);font-size:11px;color:var(--text2);">WINNER</label>
       <select id="edit-winner-${i}" class="pct-in" style="width:auto;min-width:110px;">${winnerOpts}</select>
@@ -720,202 +1364,239 @@ function buildEditForm(i){
       <button class="btn sm" onclick="cancelEdit()">Cancel</button>
     </div>
   </div>`;
-}
+      }
 
-// ── PHASE / CLEARED ────────────────────────────────────────────
-function migrateCleared(c){
-  const empty=()=>({1:{},2:{},3:{},4:{},5:{},6:{}});
-  if(!c||typeof c!=='object') return empty();
-  if('1' in c||'2' in c||'3' in c||'4' in c||'5' in c||'6' in c)
-    return {1:c[1]||{},2:c[2]||{},3:c[3]||{},4:c[4]||{},5:c[5]||{},6:c[6]||{}};
-  return {1:c,2:{},3:{},4:{},5:{},6:{}}; // old flat format → assign to phase 1
-}
+      // ── PHASE / CLEARED ────────────────────────────────────────────
+      function migrateCleared(c) {
+        const empty = () => ({ 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} });
+        if (!c || typeof c !== 'object') return empty();
+        if ('1' in c || '2' in c || '3' in c || '4' in c || '5' in c || '6' in c || '7' in c)
+          return {
+            1: c[1] || {},
+            2: c[2] || {},
+            3: c[3] || {},
+            4: c[4] || {},
+            5: c[5] || {},
+            6: c[6] || {},
+            7: c[7] || {},
+          };
+        return { 1: c, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} }; // old flat format → assign to phase 1
+      }
 
-function setPhase(ph){
-  state.currentPhase=ph;
-  renderManager();
-  saveToSheet();
-}
+      function setPhase(ph) {
+        state.currentPhase = ph;
+        renderManager();
+        saveToSheet();
+      }
 
-function updateCleared(player,value,phase){
-  if(!state.cleared[phase]) state.cleared[phase]={};
-  state.cleared[phase][player]=parseFloat(value)||0;
-  renderManager();
-  saveToSheet();
-}
+      function updateCleared(player, value, phase) {
+        if (!state.cleared[phase]) state.cleared[phase] = {};
+        state.cleared[phase][player] = parseFloat(value) || 0;
+        renderManager();
+        saveToSheet();
+      }
 
-// ── RENDER MANAGER ─────────────────────────────────────────────
-function checkLimits(){
-  const LIMIT=2500;
-  const breached=[];
-  for(const p of PLAYERS){
-    const phaseNet={1:0,2:0,3:0,4:0,5:0,6:0};
-    for(const row of state.rows){
-      const bet=row.ratio.bets[p]; if(!bet) continue;
-      const c=calcBet(row.ratio,bet,row.winner,p);
-      if(c.net===null) continue;
-      const ph=row.phase||1;
-      if(phaseNet[ph]!==undefined) phaseNet[ph]+=c.net;
-    }
-    let overallPending=0;
-    for(const ph of [1,2,3,4,5,6]){
-      const net=phaseNet[ph];
-      const cl=(state.cleared[ph]||{})[p]||0;
-      overallPending+=net>=0?net-cl:net+cl;
-    }
-    if(overallPending<-LIMIT) breached.push(`${p} (₹${Math.abs(overallPending).toFixed(0)})`);
-  }
-  if(breached.length){
-    alert(`⚠️ Limit Alert — the following player(s) have crossed ₹${LIMIT} pending:\n\n${breached.join('\n')}`);
-  }
-}
+      // ── RENDER MANAGER ─────────────────────────────────────────────
+      function checkLimits() {
+        const LIMIT = 2500;
+        const breached = [];
+        for (const p of PLAYERS) {
+          const phaseNet = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+          for (const row of state.rows) {
+            const bet = row.ratio.bets[p];
+            if (!bet) continue;
+            const c = calcBet(row.ratio, bet, row.winner, p);
+            if (c.net === null) continue;
+            const ph = row.phase || 1;
+            if (phaseNet[ph] !== undefined) phaseNet[ph] += c.net;
+          }
+          let overallPending = 0;
+          for (const ph of [1, 2, 3, 4, 5, 6, 7]) {
+            const net = phaseNet[ph];
+            const cl = (state.cleared[ph] || {})[p] || 0;
+            overallPending += net >= 0 ? net - cl : net + cl;
+          }
+          if (overallPending < -LIMIT) breached.push(`${p} (₹${Math.abs(overallPending).toFixed(0)})`);
+        }
+        if (breached.length) {
+          alert(`⚠️ Limit Alert — the following player(s) have crossed ₹${LIMIT} pending:\n\n${breached.join('\n')}`);
+        }
+      }
 
-function renderManager(){
-  const out=document.getElementById('mgr-output');
-  if(!state.rows.length){out.innerHTML='';return;}
+      function renderManager() {
+        const out = document.getElementById('mgr-output');
+        if (!state.rows.length) {
+          out.innerHTML = '';
+          return;
+        }
 
-  // Phase selector
-  const phaseHtml=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        // Phase selector
+        const phaseHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
     <span style="font-size:12px;color:var(--text2);font-family:var(--mono);">New data → </span>
-    <button class="btn sm${state.currentPhase===4?' accent':''}" onclick="setPhase(4)">MLC</button>
-    <button class="btn sm${state.currentPhase===5?' accent':''}" onclick="setPhase(5)">100</button>
-    <button class="btn sm${state.currentPhase===6?' accent':''}" onclick="setPhase(6)">CPL</button>
+    <button class="btn sm${state.currentPhase === 5 ? ' accent' : ''}" onclick="setPhase(5)">100</button>
+    <button class="btn sm${state.currentPhase === 6 ? ' accent' : ''}" onclick="setPhase(6)">CPL</button>
+    <button class="btn sm${state.currentPhase === 7 ? ' accent' : ''}" onclick="setPhase(7)">ETPL</button>
   </div>`;
 
-  // Build per-phase and overall totals
-  const mk=()=>{const t={};for(const p of PLAYERS)t[p]={stake:0,gross:0,mgr:0,net:0,bets:0};return t;};
-  const totals={1:mk(),2:mk(),3:mk(),4:mk(),5:mk(),6:mk(),all:mk()};
-  const mgrTot={1:0,2:0,3:0,4:0,5:0,6:0,all:0};
+        // Build per-phase and overall totals
+        const mk = () => {
+          const t = {};
+          for (const p of PLAYERS) t[p] = { stake: 0, gross: 0, mgr: 0, net: 0, bets: 0 };
+          return t;
+        };
+        const totals = { 1: mk(), 2: mk(), 3: mk(), 4: mk(), 5: mk(), 6: mk(), 7: mk(), all: mk() };
+        const mgrTot = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, all: 0 };
 
-  for(const row of state.rows){
-    const ph=row.phase||1;
-    const ratio=row.ratio,winner=row.winner;
-    for(const p of PLAYERS){
-      const bet=ratio.bets[p]; if(!bet) continue;
-      totals[ph][p].bets++; totals[ph][p].stake+=bet.amount;
-      totals['all'][p].bets++; totals['all'][p].stake+=bet.amount;
-      const c=calcBet(ratio,bet,winner,p);
-      if(c.net!==null){
-        totals[ph][p].gross+=c.gross; totals[ph][p].mgr+=c.mgr||0; totals[ph][p].net+=c.net;
-        totals['all'][p].gross+=c.gross; totals['all'][p].mgr+=c.mgr||0; totals['all'][p].net+=c.net;
-        mgrTot[ph]+=c.mgr||0; mgrTot['all']+=c.mgr||0;
-      }
-    }
-  }
+        for (const row of state.rows) {
+          const ph = row.phase || 1;
+          const ratio = row.ratio,
+            winner = row.winner;
+          for (const p of PLAYERS) {
+            const bet = ratio.bets[p];
+            if (!bet) continue;
+            if (!totals[ph]) continue;
+            totals[ph][p].bets++;
+            totals[ph][p].stake += bet.amount;
+            totals['all'][p].bets++;
+            totals['all'][p].stake += bet.amount;
+            const c = calcBet(ratio, bet, winner, p);
+            if (c.net !== null) {
+              totals[ph][p].gross += c.gross;
+              totals[ph][p].mgr += c.mgr || 0;
+              totals[ph][p].net += c.net;
+              totals['all'][p].gross += c.gross;
+              totals['all'][p].mgr += c.mgr || 0;
+              totals['all'][p].net += c.net;
+              mgrTot[ph] += c.mgr || 0;
+              mgrTot['all'] += c.mgr || 0;
+            }
+          }
+        }
 
-  // Manage matches panel
-  const detailsOpen=document.querySelector('#mgr-output details')?.open;
-  let manageHtml=`<details ${detailsOpen?'open':''} style="margin-bottom:16px;"><summary style="cursor:pointer;font-size:12px;color:var(--text3);padding:8px 0;">Manage matches (${state.rows.length})</summary>
+        // Manage matches panel
+        const detailsOpen = document.querySelector('#mgr-output details')?.open;
+        let manageHtml = `<details ${detailsOpen ? 'open' : ''} style="margin-bottom:16px;"><summary style="cursor:pointer;font-size:12px;color:var(--text3);padding:8px 0;">Manage matches (${state.rows.length})</summary>
     <div style="overflow-x:auto;margin-top:8px;"><table>
       <thead><tr><th>Date</th><th>Match</th><th>Round</th><th>Phase</th><th>Result</th><th></th></tr></thead><tbody>`;
-  for(let i=state.rows.length-1;i>=0;i--){
-    const row=state.rows[i];
-    const ratio=row.ratio;
-    const ph=row.phase||1;
-    const isEditing=state.editingRow===i;
-    manageHtml+=`<tr${isEditing?' class="edit-open"':''}>
+        for (let i = state.rows.length - 1; i >= 0; i--) {
+          const row = state.rows[i];
+          const ratio = row.ratio;
+          const ph = row.phase || 1;
+          const isEditing = state.editingRow === i;
+          manageHtml += `<tr${isEditing ? ' class="edit-open"' : ''}>
       <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${row.date}</td>
       <td style="white-space:nowrap">${row.match}</td>
       <td style="font-family:var(--mono);font-size:12px;white-space:nowrap">${ratio.underdog} ${ratio.low}:${ratio.high} · R${ratio.roundNum}</td>
-      <td><span class="${ph===5?'ratio-tag':'round-tag'}">${phaseLabel(ph)}</span></td>
-      <td>${row.winner?`<span class="winner-tag">✓ ${row.winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
+      <td><span class="${ph === 5 ? 'ratio-tag' : 'round-tag'}">${phaseLabel(ph)}</span></td>
+      <td>${row.winner ? `<span class="winner-tag">✓ ${row.winner}</span>` : `<span class="pending-tag">Pending</span>`}</td>
       <td style="white-space:nowrap;">
         <button class="btn sm" style="font-size:11px;margin-right:4px;" onclick="openEdit(${i})">Edit</button>
         <button class="btn sm" style="color:var(--red);border-color:var(--red);padding:3px 10px;font-size:11px;" onclick="deleteRow(${i})">✕</button>
       </td>
     </tr>`;
-    if(isEditing){
-      manageHtml+=`<tr><td colspan="6" style="padding:14px 16px;background:var(--surface2);border-top:2px solid var(--accent);">${buildEditForm(i)}</td></tr>`;
-    }
-  }
-  manageHtml+=`</tbody></table></div></details>`;
+          if (isEditing) {
+            manageHtml += `<tr><td colspan="6" style="padding:14px 16px;background:var(--surface2);border-top:2px solid var(--accent);">${buildEditForm(i)}</td></tr>`;
+          }
+        }
+        manageHtml += `</tbody></table></div></details>`;
 
-  // Build one summary table for a given phase key
-  const buildTable=(phKey,label)=>{
-    const t=totals[phKey];
-    const active=PLAYERS.filter(p=>t[p].bets>0);
-    if(!active.length) return '';
-    active.sort((a,b)=>t[b].net-t[a].net);
-    const isAll=phKey==='all';
-    let html=`<div class="card" style="margin-bottom:1.25rem;">
+        // Build one summary table for a given phase key
+        const buildTable = (phKey, label) => {
+          const t = totals[phKey];
+          const active = PLAYERS.filter(p => t[p].bets > 0);
+          if (!active.length) return '';
+          active.sort((a, b) => t[b].net - t[a].net);
+          const isAll = phKey === 'all';
+          let html = `<div class="card" style="margin-bottom:1.25rem;">
       <div class="card-header" style="padding:10px 18px;"><div class="card-label">${label}</div></div>
       <div style="overflow-x:auto;"><table>
         <thead><tr>
           <th>Player</th><th>Stake</th><th>Gross P&amp;L</th>
           <th>Mgr ${state.mgrPct}%</th><th>Net P&amp;L</th><th>Cleared</th><th>Pending</th>
         </tr></thead><tbody>`;
-    for(const p of active){
-      const pt=t[p];
-      let cleared=0,pending=0;
-      if(isAll){
-        for(const ph of [1,2,3,4,5,6]){
-          const cl=(state.cleared[ph]||{})[p]||0;
-          cleared+=cl;
-          const n=totals[ph][p].net;
-          pending+=n>=0?n-cl:n+cl;
-        }
-      } else {
-        cleared=(state.cleared[phKey]||{})[p]||0;
-        pending=pt.net>=0?pt.net-cleared:pt.net+cleared;
-      }
-      const clearedCell=isAll
-        ?`<td style="font-family:var(--mono)">${cleared>0?'+':''}₹${Math.abs(cleared).toFixed(2)}</td>`
-        :`<td><input type="number" class="pct-in" style="width:90px;" value="${cleared||''}" placeholder="0" onblur="updateCleared('${p}',this.value,${phKey})"/></td>`;
-      html+=`<tr>
+          for (const p of active) {
+            const pt = t[p];
+            let cleared = 0,
+              pending = 0;
+            if (isAll) {
+              for (const ph of [1, 2, 3, 4, 5, 6, 7]) {
+                const cl = (state.cleared[ph] || {})[p] || 0;
+                cleared += cl;
+                const n = totals[ph] ? totals[ph][p].net : 0;
+                pending += n >= 0 ? n - cl : n + cl;
+              }
+            } else {
+              cleared = (state.cleared[phKey] || {})[p] || 0;
+              pending = pt.net >= 0 ? pt.net - cleared : pt.net + cleared;
+            }
+            const clearedCell = isAll
+              ? `<td style="font-family:var(--mono)">${cleared > 0 ? '+' : ''}₹${Math.abs(cleared).toFixed(2)}</td>`
+              : `<td><input type="number" class="pct-in" style="width:90px;" value="${cleared || ''}" placeholder="0" onblur="updateCleared('${p}',this.value,${phKey})"/></td>`;
+            html += `<tr>
         <td><span class="pill">${p}</span></td>
         <td style="font-family:var(--mono)">₹${pt.stake.toFixed(0)}</td>
         <td>${fmtPL(pt.gross)}</td>
-        <td>${pt.mgr>0?`<span style="font-family:var(--mono);color:var(--amber)">−₹${pt.mgr.toFixed(2)}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+        <td>${pt.mgr > 0 ? `<span style="font-family:var(--mono);color:var(--amber)">−₹${pt.mgr.toFixed(2)}</span>` : '<span style="color:var(--text3)">—</span>'}</td>
         <td>${fmtPL(pt.net)}</td>
         ${clearedCell}
         <td>${fmtPL(pending)}</td>
       </tr>`;
-    }
-    if(!active.length) html+=`<tr><td colspan="7" class="no-data">No bets recorded yet</td></tr>`;
-    html+=`</tbody></table></div>`;
-    if(mgrTot[phKey]>0){
-      html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+          }
+          if (!active.length) html += `<tr><td colspan="7" class="no-data">No bets recorded yet</td></tr>`;
+          html += `</tbody></table></div>`;
+          if (mgrTot[phKey] > 0) {
+            html += `<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
         <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Manager share</span>
         <span class="s-val amber" style="font-size:20px;">₹${mgrTot[phKey].toFixed(2)}</span>
       </div>`;
-    }
-    html+=`</div>`;
-    return html;
-  };
+          }
+          html += `</div>`;
+          return html;
+        };
 
-  const hasP1=PLAYERS.some(p=>totals[1][p].bets>0);
-  const hasP2=PLAYERS.some(p=>totals[2][p].bets>0);
-  const hasP3=PLAYERS.some(p=>totals[3][p].bets>0);
-  const hasP4=PLAYERS.some(p=>totals[4][p].bets>0);
-  const hasP5=PLAYERS.some(p=>totals[5][p].bets>0);
-  const hasP6=PLAYERS.some(p=>totals[6][p].bets>0);
-  const multiPhase=[hasP1,hasP2,hasP3,hasP4,hasP5,hasP6].filter(Boolean).length>1;
-  const overallLabel=[hasP1&&'Phase 1',hasP2&&'Phase 2',hasP3&&'Phase 3',hasP4&&'MLC',hasP5&&'100',hasP6&&'CPL'].filter(Boolean).join(' + ');
-  const summaryHtml=
-    (multiPhase?buildTable('all',`Overall (${overallLabel})`):'')
-    +(hasP6?buildTable(6,'CPL'):'')
-    +(hasP5?buildTable(5,'100'):'')
-    +(hasP4?buildTable(4,'MLC'):'')
-    +(hasP3?buildTable(3,'Phase 3'):'')
-    +(hasP2?buildTable(2,'Phase 2'):'')
-    +(hasP1?buildTable(1,'Phase 1'):'');
+        const hasP1 = PLAYERS.some(p => totals[1][p].bets > 0);
+        const hasP2 = PLAYERS.some(p => totals[2][p].bets > 0);
+        const hasP3 = PLAYERS.some(p => totals[3][p].bets > 0);
+        const hasP4 = PLAYERS.some(p => totals[4][p].bets > 0);
+        const hasP5 = PLAYERS.some(p => totals[5][p].bets > 0);
+        const hasP6 = PLAYERS.some(p => totals[6][p].bets > 0);
+        const hasP7 = PLAYERS.some(p => totals[7][p].bets > 0);
+        const multiPhase =
+          [hasP1, hasP2, hasP3, hasP4, hasP5, hasP6, hasP7].filter(Boolean).length > 1;
+        const overallLabel = [
+          hasP1 && 'Phase 1',
+          hasP2 && 'Phase 2',
+          hasP3 && 'Phase 3',
+          hasP4 && 'MLC',
+          hasP5 && '100',
+          hasP6 && 'CPL',
+          hasP7 && 'ETPL',
+        ]
+          .filter(Boolean)
+          .join(' + ');
+        const summaryHtml =
+          (multiPhase ? buildTable('all', `Overall (${overallLabel})`) : '') +
+          (hasP7 ? buildTable(7, 'ETPL') : '') +
+          (hasP6 ? buildTable(6, 'CPL') : '') +
+          (hasP5 ? buildTable(5, '100') : '') +
+          (hasP3 ? buildTable(3, 'Phase 3') : '') +
+          (hasP2 ? buildTable(2, 'Phase 2') : '') +
+          (hasP1 ? buildTable(1, 'Phase 1') : '');
 
-  out.innerHTML=phaseHtml+manageHtml+summaryHtml;
-}
+        out.innerHTML = phaseHtml + manageHtml + summaryHtml;
+      }
 
-// ── RENDER PLAYER ──────────────────────────────────────────────
-function buildPlayerPhaseCard(name,phase,label){
-  const myRows=state.rows.filter(r=>
-    (r.phase||1)===phase &&
-    r.ratio &&
-    r.ratio.bets &&
-    r.ratio.bets[name]
-  );
-  if(!myRows.length) return '';
+      // ── RENDER PLAYER ──────────────────────────────────────────────
+      function buildPlayerPhaseCard(name, phase, label) {
+        const myRows = state.rows.filter(
+          r => (r.phase || 1) === phase && r.ratio && r.ratio.bets && r.ratio.bets[name],
+        );
+        if (!myRows.length) return '';
 
-  let net=0,hasResult=false;
-  const sorted=[...myRows].reverse();
-  let html=`<div class="card" style="margin-bottom:1.25rem;">
+        let net = 0,
+          hasResult = false;
+        const sorted = [...myRows].reverse();
+        let html = `<div class="card" style="margin-bottom:1.25rem;">
     <div class="card-header" style="padding:10px 18px;">
       <div class="card-label">${label}</div>
     </div>
@@ -925,240 +1606,270 @@ function buildPlayerPhaseCard(name,phase,label){
         <th>Backed</th><th>Stake</th><th>Gross P&amp;L</th><th>Your Net</th>
       </tr></thead><tbody>`;
 
-  for(const row of sorted){
-    const ratio=row.ratio,bet=ratio.bets[name],winner=row.winner;
-    const c=calcBet(ratio,bet,winner,name);
-    if(c.net!==null){net+=c.net;hasResult=true;}
-    html+=`<tr class="my-row">
+        for (const row of sorted) {
+          const ratio = row.ratio,
+            bet = ratio.bets[name],
+            winner = row.winner;
+          const c = calcBet(ratio, bet, winner, name);
+          if (c.net !== null) {
+            net += c.net;
+            hasResult = true;
+          }
+          html += `<tr class="my-row">
       <td style="font-family:var(--mono);white-space:nowrap;font-size:12px">${row.date}</td>
       <td style="font-weight:500;white-space:nowrap">${row.match}</td>
-      <td>${winner?`<span class="winner-tag">✓ ${winner}</span>`:`<span class="pending-tag">Pending</span>`}</td>
+      <td>${winner ? `<span class="winner-tag">✓ ${winner}</span>` : `<span class="pending-tag">Pending</span>`}</td>
       <td><span class="ratio-tag">${ratio.underdog} ${ratio.low}:${ratio.high}</span></td>
       <td style="font-family:var(--mono)">${bet.team}</td>
       <td style="font-family:var(--mono)">₹${bet.amount.toFixed(0)}</td>
       <td>${fmtPL(c.gross)}</td><td>${fmtPL(c.net)}</td>
     </tr>`;
-  }
+        }
 
-  html+=`</tbody></table></div>`;
+        html += `</tbody></table></div>`;
 
-  if(hasResult){
-    const cl=(state.cleared[phase]||{})[name]||0;
-    const pend=net>=0?net-cl:net+cl;
-    html+=`<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        if (hasResult) {
+          const cl = (state.cleared[phase] || {})[name] || 0;
+          const pend = net >= 0 ? net - cl : net + cl;
+          html += `<div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
       <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">${label} Net P&amp;L</span>
-      <span class="s-val ${net>=0?'win':'loss'}" style="font-size:20px;">${net>=0?'+':'-'}₹${Math.abs(net).toFixed(2)}</span>
+      <span class="s-val ${net >= 0 ? 'win' : 'loss'}" style="font-size:20px;">${net >= 0 ? '+' : '-'}₹${Math.abs(net).toFixed(2)}</span>
     </div>
     <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--green-dim);">
       <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Cleared</span>
-      <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${cl>0?'+':''}₹${Math.abs(cl).toFixed(2)}</span>
+      <span style="font-family:var(--mono);font-size:16px;color:var(--green);">${cl > 0 ? '+' : ''}₹${Math.abs(cl).toFixed(2)}</span>
     </div>
-    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pend)<0.01?'var(--green-dim)':'var(--amber-dim)'};">
+    <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:${Math.abs(pend) < 0.01 ? 'var(--green-dim)' : 'var(--amber-dim)'};">
       <span style="font-size:12px;color:var(--text2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">Pending</span>
-      <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pend)<0.01?'var(--green)':'var(--amber)'};">${pend>=0?'+':'-'}₹${Math.abs(pend).toFixed(2)}${Math.abs(pend)<0.01?' ✓ Settled':''}</span>
+      <span style="font-family:var(--mono);font-size:16px;color:${Math.abs(pend) < 0.01 ? 'var(--green)' : 'var(--amber)'};">${pend >= 0 ? '+' : '-'}₹${Math.abs(pend).toFixed(2)}${Math.abs(pend) < 0.01 ? ' ✓ Settled' : ''}</span>
     </div>`;
-  }
-
-  html+=`</div>`;
-  return html;
-}
-
-function setPlayerTab(ph){
-  state.playerTabPhase=ph;
-  renderPlayer(state.currentUser);
-}
-
-function renderPlayer(name){
-  const out=document.getElementById('player-output');
-
-  if(state.playerSummary){
-    out.innerHTML='';
-    return;
-  }
-
-  const hasPhaseBets=ph=>state.rows.some(r=>
-    (r.phase||1)===ph && r.ratio && r.ratio.bets && r.ratio.bets[name]
-  );
-  const phasesWithData=PLAYER_PHASES.filter(hasPhaseBets);
-
-  if(!phasesWithData.length){
-    out.innerHTML=`<div class="card"><div class="no-data">No MLC, 100, or CPL bets found for ${name} yet.</div></div>`;
-    return;
-  }
-
-  if(!phasesWithData.includes(state.playerTabPhase)){
-    state.playerTabPhase=phasesWithData[0];
-  }
-
-  const tabsHtml=`<div class="phase-tabs">${
-    PLAYER_PHASES.map(ph=>{
-      const has=hasPhaseBets(ph);
-      const active=state.playerTabPhase===ph;
-      return `<button type="button" class="btn sm${active?' accent':''}${has?'':' tab-empty'}"${
-        has?` onclick="setPlayerTab(${ph})"`:''}>${phaseLabel(ph)}</button>`;
-    }).join('')
-  }</div>`;
-
-  const cardHtml=buildPlayerPhaseCard(name,state.playerTabPhase,phaseLabel(state.playerTabPhase));
-  out.innerHTML=tabsHtml+cardHtml;
-}
-
-// ── SHEETS API ─────────────────────────────────────────────────
-function syncStatus(msg,cls=''){
-  const el=document.getElementById('sync-status');
-  if(el){el.textContent=msg;el.className='sync '+cls;}
-}
-
-function authHeaders(){
-  if(!state.accessToken||Date.now()>=state.tokenExpiry)
-    throw new Error('Google not connected. Click "Sign in with Google" first.');
-  return {Authorization:'Bearer '+state.accessToken,'Content-Type':'application/json'};
-}
-
-async function sheetsRead(range){
-  const cfg=getCfg();
-  const r=await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}`,
-    {headers:authHeaders()}
-  );
-  const j=await r.json();
-  if(j.error) throw new Error(j.error.message);
-  return j.values?.[0]?.[0]||null;
-}
-
-// Fetch player data via Apps Script (sheet stays private)
-async function fetchPlayerData(name,pin){
-  const scriptUrl=getScriptUrl();
-  if(!scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
-  const url=`${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
-  const r=await fetch(url);
-  const j=await r.json();
-  if(!j.ok) throw new Error(j.error||'Login failed');
-  return {
-    ok:true,
-    rows:(j.rows||[]).map(row=>({...row,phase:row.phase||1})),
-    mgrPct:j.mgrPct||1,
-    cleared:j.cleared
-  };
-}
-
-async function sheetsWrite(range,values){
-  const cfg=getCfg();
-  const r=await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
-    {method:'PUT',headers:authHeaders(),body:JSON.stringify({values})}
-  );
-  const j=await r.json();
-  if(j.error) throw new Error(j.error.message);
-  return j;
-}
-
-function buildSheetRow(row){
-  const ratio=row.ratio,winner=row.winner;
-  const dateStr=row.date;
-  const fixtureStr=row.match;
-  const ratioStr=`${ratio.underdog} ${ratio.low}:${ratio.high}`;
-  let mgrTotal=0;
-  const betCols=PLAYERS.map(p=>{const b=ratio.bets[p];return b?`${b.team} ${b.amount}`:"";});
-  const netCols=PLAYERS.map(p=>{
-    const b=ratio.bets[p]; if(!b||!winner) return "";
-    const c=calcBet(ratio,b,winner,p);
-    if(c.mgr!==null) mgrTotal+=c.mgr;
-    return c.net!==null?parseFloat(c.net.toFixed(2)):"";
-  });
-  return [dateStr,fixtureStr,ratioStr,...betCols,mgrTotal>0?parseFloat(mgrTotal.toFixed(2)):"",...netCols];
-}
-
-async function getLastRow(sheetTab){
-  const cfg=getCfg();
-  const r=await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(sheetTab+'!A:A')}`,
-    {headers:authHeaders()}
-  );
-  const j=await r.json();
-  if(j.error) throw new Error(j.error.message);
-  return (j.values||[]).length; // includes header row
-}
-
-async function saveToSheet(){
-  if(!state.accessToken||Date.now()>=state.tokenExpiry){
-    syncStatus('✗ Connect Google Account first','err');
-    return;
-  }
-  syncStatus('Saving…','loading');
-  try{
-    // Save app state to MLC_APP_DATA — chunked across rows to stay under 50k/cell limit
-    const json=JSON.stringify({rows:state.rows,pins:state.pins,mgrPct:state.mgrPct,cleared:state.cleared,currentPhase:state.currentPhase});
-    const CHUNK=45000;
-    const chunks=[];
-    for(let i=0;i<json.length;i+=CHUNK) chunks.push([json.slice(i,i+CHUNK)]);
-    // Pad to 20 rows to overwrite any leftover chunks from a previous larger save
-    while(chunks.length<20) chunks.push(['']);
-    await sheetsWrite(`MLC_APP_DATA!A1:A${chunks.length}`,chunks);
-
-    // Append only the NEW rows (ones not yet written)
-    if(state.newRows && state.newRows.length){
-      const ph=state.newRows[0].phase||state.currentPhase;
-      const sheetTab=sheetForPhase(ph);
-      const lastRow=await getLastRow(sheetTab);
-      const startRow=lastRow+1;
-      const sheetRows=state.newRows.map(buildSheetRow);
-      await sheetsWrite(`${sheetTab}!A${startRow}:AL${startRow+sheetRows.length-1}`,sheetRows);
-      state.newRows=null;
-    }
-    syncStatus('✓ Synced to Sheet','ok');
-    setTimeout(()=>syncStatus(''),3000);
-  }catch(e){ syncStatus('✗ '+e.message,'err'); }
-}
-
-async function loadFromSheet(){
-  if(!state.accessToken||Date.now()>=state.tokenExpiry) return;
-  syncStatus('Loading…','loading');
-  try{
-    // Load MLC_APP_DATA — reassemble chunks from column A
-    const cfg=getCfg();
-    const ar=await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent('MLC_APP_DATA!A1:A20')}`,
-      {headers:authHeaders()}
-    );
-    const aj=await ar.json();
-    if(aj.error) throw new Error(aj.error.message);
-    const val=(aj.values||[]).map(r=>r[0]||'').join('');
-    if(val){
-      const d=JSON.parse(val);
-      state.rows=(d.rows||[]).map(r=>({...r,phase:r.phase||1}));
-      state.pins=d.pins||{};
-      state.mgrPct=d.mgrPct||1;
-      state.cleared=migrateCleared(d.cleared);
-      state.currentPhase=d.currentPhase||5;
-      document.getElementById('mgr-pct').value=state.mgrPct;
-    }
-    rebuildPinGrid(); renderManager(); checkLimits();
-    syncStatus('✓ Loaded','ok');
-    setTimeout(()=>syncStatus(''),2000);
-  }catch(e){ syncStatus('✗ '+e.message,'err'); }
-}
-
-// ── INIT ───────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded',()=>{
-  const cfg=getCfg();
-  // Players only need the scriptUrl (baked in above) — go straight to login
-  // Manager needs full config — uses ⚙ Reconfigure to set up
-  if(getScriptUrl()){
-    show('screen-login');
-    if(cfg.clientId){
-      const tryInit=setInterval(()=>{
-        if(window.google && window.google.accounts){
-          clearInterval(tryInit);
-          initGIS();
         }
-      },200);
-    }
-  } else {
-    show('screen-setup');
-  }
-  rebuildPinGrid();
-});
-</script>
-</body>
+
+        html += `</div>`;
+        return html;
+      }
+
+      function setPlayerTab(ph) {
+        state.playerTabPhase = ph;
+        renderPlayer(state.currentUser);
+      }
+
+      function renderPlayer(name) {
+        const out = document.getElementById('player-output');
+
+        if (state.playerSummary) {
+          out.innerHTML = '';
+          return;
+        }
+
+        const hasPhaseBets = ph =>
+          state.rows.some(r => (r.phase || 1) === ph && r.ratio && r.ratio.bets && r.ratio.bets[name]);
+        const phasesWithData = PLAYER_PHASES.filter(hasPhaseBets);
+
+        if (!phasesWithData.length) {
+          out.innerHTML = `<div class="card"><div class="no-data">No 100, CPL, or ETPL bets found for ${name} yet.</div></div>`;
+          return;
+        }
+
+        if (!phasesWithData.includes(state.playerTabPhase)) {
+          state.playerTabPhase = phasesWithData.includes(6) ? 6 : phasesWithData[0];
+        }
+
+        const tabsHtml = `<div class="phase-tabs">${PLAYER_PHASES.map(ph => {
+          const has = hasPhaseBets(ph);
+          const active = state.playerTabPhase === ph;
+          return `<button type="button" class="btn sm${active ? ' accent' : ''}${has ? '' : ' tab-empty'}"${
+            has ? ` onclick="setPlayerTab(${ph})"` : ''
+          }>${phaseLabel(ph)}</button>`;
+        }).join('')}</div>`;
+
+        const cardHtml = buildPlayerPhaseCard(name, state.playerTabPhase, phaseLabel(state.playerTabPhase));
+        out.innerHTML = tabsHtml + cardHtml;
+      }
+
+      // ── SHEETS API ─────────────────────────────────────────────────
+      function syncStatus(msg, cls = '') {
+        const el = document.getElementById('sync-status');
+        if (el) {
+          el.textContent = msg;
+          el.className = 'sync ' + cls;
+        }
+      }
+
+      function authHeaders() {
+        if (!state.accessToken || Date.now() >= state.tokenExpiry)
+          throw new Error('Google not connected. Click "Sign in with Google" first.');
+        return { Authorization: 'Bearer ' + state.accessToken, 'Content-Type': 'application/json' };
+      }
+
+      async function sheetsRead(range) {
+        const cfg = getCfg();
+        const r = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}`,
+          { headers: authHeaders() },
+        );
+        const j = await r.json();
+        if (j.error) throw new Error(j.error.message);
+        return j.values?.[0]?.[0] || null;
+      }
+
+      // Fetch player data via Apps Script (sheet stays private)
+      async function fetchPlayerData(name, pin) {
+        const scriptUrl = getScriptUrl();
+        if (!scriptUrl) throw new Error('Apps Script URL not configured. Ask the manager.');
+        const url = `${scriptUrl}?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`;
+        const r = await fetch(url);
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'Login failed');
+        return {
+          ok: true,
+          rows: (j.rows || []).map(row => ({ ...row, phase: row.phase || 1 })),
+          mgrPct: j.mgrPct || 1,
+          cleared: j.cleared,
+        };
+      }
+
+      async function sheetsWrite(range, values) {
+        const cfg = getCfg();
+        const r = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}?valueInputOption=RAW`,
+          { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ values }) },
+        );
+        const j = await r.json();
+        if (j.error) throw new Error(j.error.message);
+        return j;
+      }
+
+      function buildSheetRow(row) {
+        const ratio = row.ratio,
+          winner = row.winner;
+        const dateStr = row.date;
+        const fixtureStr = row.match;
+        const ratioStr = `${ratio.underdog} ${ratio.low}:${ratio.high}`;
+        let mgrTotal = 0;
+        const betCols = PLAYERS.map(p => {
+          const b = ratio.bets[p];
+          return b ? `${b.team} ${b.amount}` : '';
+        });
+        const netCols = PLAYERS.map(p => {
+          const b = ratio.bets[p];
+          if (!b || !winner) return '';
+          const c = calcBet(ratio, b, winner, p);
+          if (c.mgr !== null) mgrTotal += c.mgr;
+          return c.net !== null ? parseFloat(c.net.toFixed(2)) : '';
+        });
+        return [
+          dateStr,
+          fixtureStr,
+          ratioStr,
+          ...betCols,
+          mgrTotal > 0 ? parseFloat(mgrTotal.toFixed(2)) : '',
+          ...netCols,
+        ];
+      }
+
+      async function getLastRow(sheetTab) {
+        const cfg = getCfg();
+        const r = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(sheetTab + '!A:A')}`,
+          { headers: authHeaders() },
+        );
+        const j = await r.json();
+        if (j.error) throw new Error(j.error.message);
+        return (j.values || []).length; // includes header row
+      }
+
+      async function saveToSheet() {
+        if (!state.accessToken || Date.now() >= state.tokenExpiry) {
+          syncStatus('✗ Connect Google Account first', 'err');
+          return;
+        }
+        syncStatus('Saving…', 'loading');
+        try {
+          // Save app state to MLC_APP_DATA — chunked across rows to stay under 50k/cell limit
+          const json = JSON.stringify({
+            rows: state.rows,
+            pins: state.pins,
+            mgrPct: state.mgrPct,
+            cleared: state.cleared,
+            currentPhase: state.currentPhase,
+          });
+          const CHUNK = 45000;
+          const chunks = [];
+          for (let i = 0; i < json.length; i += CHUNK) chunks.push([json.slice(i, i + CHUNK)]);
+          // Pad to 20 rows to overwrite any leftover chunks from a previous larger save
+          while (chunks.length < 20) chunks.push(['']);
+          await sheetsWrite(`MLC_APP_DATA!A1:A${chunks.length}`, chunks);
+
+          // Append only the NEW rows (ones not yet written)
+          if (state.newRows && state.newRows.length) {
+            const ph = state.newRows[0].phase || state.currentPhase;
+            const sheetTab = sheetForPhase(ph);
+            const lastRow = await getLastRow(sheetTab);
+            const startRow = lastRow + 1;
+            const sheetRows = state.newRows.map(buildSheetRow);
+            await sheetsWrite(`${sheetTab}!A${startRow}:AL${startRow + sheetRows.length - 1}`, sheetRows);
+            state.newRows = null;
+          }
+          syncStatus('✓ Synced to Sheet', 'ok');
+          setTimeout(() => syncStatus(''), 3000);
+        } catch (e) {
+          syncStatus('✗ ' + e.message, 'err');
+        }
+      }
+
+      async function loadFromSheet() {
+        if (!state.accessToken || Date.now() >= state.tokenExpiry) return;
+        syncStatus('Loading…', 'loading');
+        try {
+          // Load MLC_APP_DATA — reassemble chunks from column A
+          const cfg = getCfg();
+          const ar = await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent('MLC_APP_DATA!A1:A20')}`,
+            { headers: authHeaders() },
+          );
+          const aj = await ar.json();
+          if (aj.error) throw new Error(aj.error.message);
+          const val = (aj.values || []).map(r => r[0] || '').join('');
+          if (val) {
+            const d = JSON.parse(val);
+            state.rows = (d.rows || []).map(r => ({ ...r, phase: r.phase || 1 }));
+            state.pins = d.pins || {};
+            state.mgrPct = d.mgrPct || 1;
+            state.cleared = migrateCleared(d.cleared);
+            state.currentPhase = d.currentPhase || 6;
+            document.getElementById('mgr-pct').value = state.mgrPct;
+          }
+          rebuildPinGrid();
+          renderManager();
+          checkLimits();
+          syncStatus('✓ Loaded', 'ok');
+          setTimeout(() => syncStatus(''), 2000);
+        } catch (e) {
+          syncStatus('✗ ' + e.message, 'err');
+        }
+      }
+
+      // ── INIT ───────────────────────────────────────────────────────
+      window.addEventListener('DOMContentLoaded', () => {
+        const cfg = getCfg();
+        // Players only need the scriptUrl (baked in above) — go straight to login
+        // Manager needs full config — uses ⚙ Reconfigure to set up
+        if (getScriptUrl()) {
+          show('screen-login');
+          if (cfg.clientId) {
+            const tryInit = setInterval(() => {
+              if (window.google && window.google.accounts) {
+                clearInterval(tryInit);
+                initGIS();
+              }
+            }, 200);
+          }
+        } else {
+          show('screen-setup');
+        }
+        rebuildPinGrid();
+      });
+    </script>
+  </body>
 </html>
