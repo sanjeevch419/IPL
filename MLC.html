@@ -704,7 +704,7 @@
               <input
                 id="login-pin"
                 maxlength="16"
-                onkeydown="if(event.key==='Enter')doLogin()"
+                onkeydown="if (event.key === 'Enter') doLogin();"
                 placeholder="Your PIN"
                 type="password"
               />
@@ -858,10 +858,11 @@
       // Manager: replace this with your Apps Script /exec URL, then push to GitHub
       const DEFAULT_SCRIPT_URL =
         'https://script.google.com/macros/s/AKfycbxve89IzPu_IBdTGLt0WOr_uOy80Hc4dKLhnV6agA0f8lZ92_ejR0PaRKEjQNS9YZ7z7w/exec';
-      const PHASE_NAMES = { 4: 'MLC', 5: '100', 6: 'CPL', 7: 'ETPL' };
-      const PHASE_SHEET = { 5: '100', 6: 'CPL', 7: 'ETPL' };
-      const ACTIVE_PHASES = [5, 6, 7];
+      const PHASE_NAMES = { 4: 'MLC', 5: '100', 6: 'CPL', 7: 'ETPL', 8: 'CPL-2' };
+      const PHASE_SHEET = { 5: '100', 6: 'CPL', 7: 'ETPL', 8: 'CPL-2' };
+      const ACTIVE_PHASES = [5, 6, 7, 8];
       const PLAYER_PHASES = ACTIVE_PHASES;
+      const DEFAULT_PHASE = 8; // CPL-2 — default tab for manager + players
       function phaseLabel(ph) {
         return PHASE_NAMES[ph] || 'Phase ' + ph;
       }
@@ -890,11 +891,11 @@
         newRows: null,
         pins: {},
         mgrPct: 1,
-        cleared: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} }, // { phase: { playerName: amountCleared } }
-        currentPhase: 6, // 5=100, 6=CPL, 7=ETPL — assigned to newly parsed data
+        cleared: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {} }, // { phase: { playerName: amountCleared } }
+        currentPhase: 8, // 5=100, 6=CPL, 7=ETPL, 8=CPL-2 — assigned to newly parsed data
         editingRow: null, // index of row open for inline editing
         currentUser: null,
-        playerTabPhase: 6, // player view: 5=100, 6=CPL, 7=ETPL
+        playerTabPhase: 8, // player view: 5=100, 6=CPL, 7=ETPL, 8=CPL-2
         playerSummary: null, // set for summary-only test accounts
         accessToken: null, // GIS token
         tokenExpiry: 0,
@@ -1033,7 +1034,7 @@ Uday MI 150`;
 
       function loginAsPlayer(name) {
         state.currentUser = name;
-        state.playerTabPhase = 6;
+        state.playerTabPhase = DEFAULT_PHASE;
         showTopbar(name, false);
         show('screen-player');
         renderPlayer(name);
@@ -1368,9 +1369,9 @@ Uday MI 150`;
 
       // ── PHASE / CLEARED ────────────────────────────────────────────
       function migrateCleared(c) {
-        const empty = () => ({ 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} });
+        const empty = () => ({ 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {} });
         if (!c || typeof c !== 'object') return empty();
-        if ('1' in c || '2' in c || '3' in c || '4' in c || '5' in c || '6' in c || '7' in c)
+        if ('1' in c || '2' in c || '3' in c || '4' in c || '5' in c || '6' in c || '7' in c || '8' in c)
           return {
             1: c[1] || {},
             2: c[2] || {},
@@ -1379,8 +1380,9 @@ Uday MI 150`;
             5: c[5] || {},
             6: c[6] || {},
             7: c[7] || {},
+            8: c[8] || {},
           };
-        return { 1: c, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} }; // old flat format → assign to phase 1
+        return { 1: c, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {} }; // old flat format → assign to phase 1
       }
 
       function setPhase(ph) {
@@ -1401,7 +1403,7 @@ Uday MI 150`;
         const LIMIT = 2500;
         const breached = [];
         for (const p of PLAYERS) {
-          const phaseNet = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+          const phaseNet = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0 };
           for (const row of state.rows) {
             const bet = row.ratio.bets[p];
             if (!bet) continue;
@@ -1411,7 +1413,7 @@ Uday MI 150`;
             if (phaseNet[ph] !== undefined) phaseNet[ph] += c.net;
           }
           let overallPending = 0;
-          for (const ph of [1, 2, 3, 4, 5, 6, 7]) {
+          for (const ph of [1, 2, 3, 4, 5, 6, 7, 8]) {
             const net = phaseNet[ph];
             const cl = (state.cleared[ph] || {})[p] || 0;
             overallPending += net >= 0 ? net - cl : net + cl;
@@ -1436,6 +1438,7 @@ Uday MI 150`;
     <button class="btn sm${state.currentPhase === 5 ? ' accent' : ''}" onclick="setPhase(5)">100</button>
     <button class="btn sm${state.currentPhase === 6 ? ' accent' : ''}" onclick="setPhase(6)">CPL</button>
     <button class="btn sm${state.currentPhase === 7 ? ' accent' : ''}" onclick="setPhase(7)">ETPL</button>
+    <button class="btn sm${state.currentPhase === 8 ? ' accent' : ''}" onclick="setPhase(8)">CPL-2</button>
   </div>`;
 
         // Build per-phase and overall totals
@@ -1444,8 +1447,8 @@ Uday MI 150`;
           for (const p of PLAYERS) t[p] = { stake: 0, gross: 0, mgr: 0, net: 0, bets: 0 };
           return t;
         };
-        const totals = { 1: mk(), 2: mk(), 3: mk(), 4: mk(), 5: mk(), 6: mk(), 7: mk(), all: mk() };
-        const mgrTot = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, all: 0 };
+        const totals = { 1: mk(), 2: mk(), 3: mk(), 4: mk(), 5: mk(), 6: mk(), 7: mk(), 8: mk(), all: mk() };
+        const mgrTot = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, all: 0 };
 
         for (const row of state.rows) {
           const ph = row.phase || 1;
@@ -1519,7 +1522,7 @@ Uday MI 150`;
             let cleared = 0,
               pending = 0;
             if (isAll) {
-              for (const ph of [1, 2, 3, 4, 5, 6, 7]) {
+              for (const ph of [1, 2, 3, 4, 5, 6, 7, 8]) {
                 const cl = (state.cleared[ph] || {})[p] || 0;
                 cleared += cl;
                 const n = totals[ph] ? totals[ph][p].net : 0;
@@ -1561,8 +1564,8 @@ Uday MI 150`;
         const hasP5 = PLAYERS.some(p => totals[5][p].bets > 0);
         const hasP6 = PLAYERS.some(p => totals[6][p].bets > 0);
         const hasP7 = PLAYERS.some(p => totals[7][p].bets > 0);
-        const multiPhase =
-          [hasP1, hasP2, hasP3, hasP4, hasP5, hasP6, hasP7].filter(Boolean).length > 1;
+        const hasP8 = PLAYERS.some(p => totals[8][p].bets > 0);
+        const multiPhase = [hasP1, hasP2, hasP3, hasP4, hasP5, hasP6, hasP7, hasP8].filter(Boolean).length > 1;
         const overallLabel = [
           hasP1 && 'Phase 1',
           hasP2 && 'Phase 2',
@@ -1571,11 +1574,13 @@ Uday MI 150`;
           hasP5 && '100',
           hasP6 && 'CPL',
           hasP7 && 'ETPL',
+          hasP8 && 'CPL-2',
         ]
           .filter(Boolean)
           .join(' + ');
         const summaryHtml =
           (multiPhase ? buildTable('all', `Overall (${overallLabel})`) : '') +
+          (hasP8 ? buildTable(8, 'CPL-2') : '') +
           (hasP7 ? buildTable(7, 'ETPL') : '') +
           (hasP6 ? buildTable(6, 'CPL') : '') +
           (hasP5 ? buildTable(5, '100') : '') +
@@ -1667,12 +1672,14 @@ Uday MI 150`;
         const phasesWithData = PLAYER_PHASES.filter(hasPhaseBets);
 
         if (!phasesWithData.length) {
-          out.innerHTML = `<div class="card"><div class="no-data">No 100, CPL, or ETPL bets found for ${name} yet.</div></div>`;
+          out.innerHTML = `<div class="card"><div class="no-data">No 100, CPL, ETPL, or CPL-2 bets found for ${name} yet.</div></div>`;
           return;
         }
 
         if (!phasesWithData.includes(state.playerTabPhase)) {
-          state.playerTabPhase = phasesWithData.includes(6) ? 6 : phasesWithData[0];
+          state.playerTabPhase = phasesWithData.includes(DEFAULT_PHASE)
+            ? DEFAULT_PHASE
+            : phasesWithData[0];
         }
 
         const tabsHtml = `<div class="phase-tabs">${PLAYER_PHASES.map(ph => {
@@ -1837,7 +1844,7 @@ Uday MI 150`;
             state.pins = d.pins || {};
             state.mgrPct = d.mgrPct || 1;
             state.cleared = migrateCleared(d.cleared);
-            state.currentPhase = d.currentPhase || 6;
+            state.currentPhase = d.currentPhase || DEFAULT_PHASE;
             document.getElementById('mgr-pct').value = state.mgrPct;
           }
           rebuildPinGrid();
