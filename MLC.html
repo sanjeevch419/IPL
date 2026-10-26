@@ -818,11 +818,10 @@
                 <span style="font-size: 12px; color: var(--text2); font-family: var(--mono); align-self: center"
                   >New data →</span
                 >
-                <button class="btn sm" data-phase="5" onclick="setPhase(5)" type="button">100</button>
-                <button class="btn sm" data-phase="6" onclick="setPhase(6)" type="button">CPL</button>
                 <button class="btn sm" data-phase="7" onclick="setPhase(7)" type="button">ETPL</button>
                 <button class="btn sm accent" data-phase="8" onclick="setPhase(8)" type="button">CPL-2</button>
                 <button class="btn sm" data-phase="9" onclick="setPhase(9)" type="button">Others</button>
+                <button class="btn sm" data-phase="10" onclick="setPhase(10)" type="button">NFL</button>
               </div>
               <textarea class="msg-area" id="mgr-input"></textarea>
               <div class="row">
@@ -922,10 +921,10 @@
       // Manager: replace this with your Apps Script /exec URL, then push to GitHub
       const DEFAULT_SCRIPT_URL =
         'https://script.google.com/macros/s/AKfycbwbIFWswAN6XX92k7WoejC2syE-DVZv_FPaZJcKXYFjzGXJaKb3pfpFAChvsHyCn0woQQ/exec';
-      const PHASE_NAMES = { 4: 'MLC', 5: '100', 6: 'CPL', 7: 'ETPL', 8: 'CPL-2', 9: 'Others' };
-      const PHASE_SHEET = { 5: '100', 6: 'CPL', 7: 'ETPL', 8: 'CPL-2', 9: 'Others' };
-      const ACTIVE_PHASES = [5, 6, 7, 8, 9];
-      const LEDGER_PHASES = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+      const PHASE_NAMES = { 4: 'MLC', 5: '100', 6: 'CPL', 7: 'ETPL', 8: 'CPL-2', 9: 'Others', 10: 'NFL' };
+      const PHASE_SHEET = { 5: '100', 6: 'CPL', 7: 'ETPL', 8: 'CPL-2', 9: 'Others', 10: 'NFL' };
+      const ACTIVE_PHASES = [7, 8, 9, 10];
+      const LEDGER_PHASES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       const PLAYER_PHASES = ACTIVE_PHASES;
       const DEFAULT_PHASE = 8; // CPL-2 — default tab for manager + players
       function phaseLabel(ph) {
@@ -956,11 +955,11 @@
         newRows: null,
         pins: {},
         mgrPct: 1,
-        cleared: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {} }, // { phase: { playerName: amountCleared } }
-        currentPhase: 8, // 5=100, 6=CPL, 7=ETPL, 8=CPL-2, 9=Others — assigned to newly parsed data
+        cleared: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {}, 10: {} }, // { phase: { playerName: amountCleared } }
+        currentPhase: 8, // 7=ETPL, 8=CPL-2, 9=Others, 10=NFL — assigned to newly parsed data
         editingRow: null, // index of row open for inline editing
         currentUser: null,
-        playerTabPhase: 8, // player view: 5=100, 6=CPL, 7=ETPL, 8=CPL-2, 9=Others
+        playerTabPhase: 8, // player view: 7=ETPL, 8=CPL-2, 9=Others, 10=NFL
         playerSummary: null, // set for summary-only test accounts
         accessToken: null, // GIS token
         tokenExpiry: 0,
@@ -1442,7 +1441,7 @@ Uday MI 150`;
 
       // ── PHASE / CLEARED ────────────────────────────────────────────
       function migrateCleared(c) {
-        const empty = () => ({ 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {} });
+        const empty = () => ({ 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {}, 10: {} });
         if (!c || typeof c !== 'object') return empty();
         if (LEDGER_PHASES.some(ph => String(ph) in c))
           return {
@@ -1455,8 +1454,9 @@ Uday MI 150`;
             7: c[7] || {},
             8: c[8] || {},
             9: c[9] || {},
+            10: c[10] || {},
           };
-        return { 1: c, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {} }; // old flat format → assign to phase 1
+        return { 1: c, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {}, 10: {} }; // old flat format → assign to phase 1
       }
 
       function setPhase(ph) {
@@ -1487,7 +1487,7 @@ Uday MI 150`;
         const LIMIT = 2500;
         const breached = [];
         for (const p of PLAYERS) {
-          const phaseNet = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+          const phaseNet = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
           for (const row of state.rows) {
             const bet = row.ratio.bets[p];
             if (!bet) continue;
@@ -1522,8 +1522,20 @@ Uday MI 150`;
           for (const p of PLAYERS) t[p] = { stake: 0, gross: 0, mgr: 0, net: 0, bets: 0 };
           return t;
         };
-        const totals = { 1: mk(), 2: mk(), 3: mk(), 4: mk(), 5: mk(), 6: mk(), 7: mk(), 8: mk(), 9: mk(), all: mk() };
-        const mgrTot = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, all: 0 };
+        const totals = {
+          1: mk(),
+          2: mk(),
+          3: mk(),
+          4: mk(),
+          5: mk(),
+          6: mk(),
+          7: mk(),
+          8: mk(),
+          9: mk(),
+          10: mk(),
+          all: mk(),
+        };
+        const mgrTot = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, all: 0 };
 
         for (const row of state.rows) {
           const ph = row.phase || 1;
@@ -1641,8 +1653,10 @@ Uday MI 150`;
         const hasP7 = PLAYERS.some(p => totals[7][p].bets > 0);
         const hasP8 = PLAYERS.some(p => totals[8][p].bets > 0);
         const hasP9 = PLAYERS.some(p => totals[9][p].bets > 0);
-        const multiPhase = [hasP1, hasP2, hasP3, hasP4, hasP5, hasP6, hasP7, hasP8, hasP9].filter(Boolean)
-          .length > 1;
+        const hasP10 = PLAYERS.some(p => totals[10][p].bets > 0);
+        const multiPhase = [hasP1, hasP2, hasP3, hasP4, hasP5, hasP6, hasP7, hasP8, hasP9, hasP10].filter(
+          Boolean,
+        ).length > 1;
         const overallLabel = [
           hasP1 && 'Phase 1',
           hasP2 && 'Phase 2',
@@ -1653,11 +1667,13 @@ Uday MI 150`;
           hasP7 && 'ETPL',
           hasP8 && 'CPL-2',
           hasP9 && 'Others',
+          hasP10 && 'NFL',
         ]
           .filter(Boolean)
           .join(' + ');
         const summaryHtml =
           (multiPhase ? buildTable('all', `Overall (${overallLabel})`) : '') +
+          (hasP10 ? buildTable(10, 'NFL') : '') +
           (hasP9 ? buildTable(9, 'Others') : '') +
           (hasP8 ? buildTable(8, 'CPL-2') : '') +
           (hasP7 ? buildTable(7, 'ETPL') : '') +
@@ -1751,7 +1767,7 @@ Uday MI 150`;
         const phasesWithData = PLAYER_PHASES.filter(hasPhaseBets);
 
         if (!phasesWithData.length) {
-          out.innerHTML = `<div class="card"><div class="no-data">No 100, CPL, ETPL, CPL-2, or Others bets found for ${name} yet.</div></div>`;
+          out.innerHTML = `<div class="card"><div class="no-data">No ETPL, CPL-2, Others, or NFL bets found for ${name} yet.</div></div>`;
           return;
         }
 
