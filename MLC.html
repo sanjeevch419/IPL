@@ -819,9 +819,9 @@
                   >New data →</span
                 >
                 <button class="btn sm" data-phase="7" onclick="setPhase(7)" type="button">ETPL</button>
-                <button class="btn sm accent" data-phase="8" onclick="setPhase(8)" type="button">CPL-2</button>
+                <button class="btn sm" data-phase="8" onclick="setPhase(8)" type="button">CPL-2</button>
                 <button class="btn sm" data-phase="9" onclick="setPhase(9)" type="button">Others</button>
-                <button class="btn sm" data-phase="10" onclick="setPhase(10)" type="button">NFL</button>
+                <button class="btn sm accent" data-phase="10" onclick="setPhase(10)" type="button">NFL</button>
               </div>
               <textarea class="msg-area" id="mgr-input"></textarea>
               <div class="row">
@@ -926,7 +926,7 @@
       const ACTIVE_PHASES = [7, 8, 9, 10];
       const LEDGER_PHASES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
       const PLAYER_PHASES = ACTIVE_PHASES;
-      const DEFAULT_PHASE = 8; // CPL-2 — default tab for manager + players
+      const DEFAULT_PHASE = 10; // NFL — default tab for manager + players
       function phaseLabel(ph) {
         return PHASE_NAMES[ph] || 'Phase ' + ph;
       }
@@ -956,10 +956,10 @@
         pins: {},
         mgrPct: 1,
         cleared: { 1: {}, 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {}, 8: {}, 9: {}, 10: {} }, // { phase: { playerName: amountCleared } }
-        currentPhase: 8, // 7=ETPL, 8=CPL-2, 9=Others, 10=NFL — assigned to newly parsed data
+        currentPhase: 10, // 7=ETPL, 8=CPL-2, 9=Others, 10=NFL — assigned to newly parsed data
         editingRow: null, // index of row open for inline editing
         currentUser: null,
-        playerTabPhase: 8, // player view: 7=ETPL, 8=CPL-2, 9=Others, 10=NFL
+        playerTabPhase: 10, // player view: 7=ETPL, 8=CPL-2, 9=Others, 10=NFL
         playerSummary: null, // set for summary-only test accounts
         accessToken: null, // GIS token
         tokenExpiry: 0,
